@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import json
 import re
+from utils import get_data, get_month
 
 # Get some data from the SHMI OpenData API
 # response2 = requests.get("https://opendata-download-metanalys.smhi.se/api/category/mesan1g/version/2/geotype/point/lon/17.893379/lat/59.597679/data.json")
@@ -39,41 +40,4 @@ dep_df['departureDate'] = data_key_column
 dep_df['month']         = month_column
 
 
-dep_df.T
-
-
-
-
-
-
-
-# Function to devide the different parts of datatime
-def get_data(x):
-    year   = '' 
-    month  = ''
-    day    = ''
-    hour   = 0
-    minute = 0
-    second = 0
-    datetime_pattern = re.compile(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z')
-    match = datetime_pattern.match(x)
-
-    if match:
-      year, month, day, hour, minute, second = map(str, match.groups())
-    
-    my_date = year + '-' + month + '-' + day
-    return (my_date)
-
-
-# Function to get the month from the datatime
-def get_month(x):
-    month = 0
-    datetime_pattern = re.compile(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z')
-    match = datetime_pattern.match(x)
-
-    if match:
-      year, month, day, hour, minute, second = map(int, match.groups())
-    
-    my_month = month
-    return (my_month)
-
+print(dep_df.head().T)
