@@ -1,0 +1,17 @@
+name: smlX
+channels: 
+- defaults
+- conda-forge
+dependencies:
+- python==3.10.13
+- numpy
+- pandas
+- joblib
+- scikit-learn==1.1.1
+- seaborn
+- dataframe_image
+- gradio
+- pip
+- twofish
+# You also need to install "hopsworks" through "pip install hopsworks"
+# You also need to install "modal" through "pip install modal"
