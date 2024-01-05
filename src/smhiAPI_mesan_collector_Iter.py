@@ -67,7 +67,7 @@ for month in range(starting_month, ending_month + 1):
                 print(url)
 
                 file_name = 'ARN_' + new_row_date + '_' + hh00
-                save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_weather/"
+                save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_grib/"
                 complete_name = os.path.join(save_path, file_name)
 
 
