@@ -277,3 +277,52 @@ def get_df_label_from_grib_label(grib_label):
     df_label = 'gradient_snow'
 
   return df_label
+
+
+def get_wind_dir_label(wind_dir_degree):
+  '''
+  Returns the wind direction label (N, S, W, E, NE, etc...), according
+  to the wind_direction_degree passed as input.
+  '''
+  wind_dir_label = ''
+
+  pi         = 180
+  pi_half    = pi/2
+  pi_quarter = pi/4
+  pi_eighth  = pi/8
+
+  # WEST
+  if wind_dir_degree < -pi + pi_eighth:
+    wind_dir_label = 'W'
+  # SOUTH-WEST
+  elif wind_dir_degree < -pi + pi_quarter + pi_eighth:
+    wind_dir_label = 'SW'
+  # SOUTH
+  elif wind_dir_degree < -pi + pi_half + pi_eighth:
+    wind_dir_label = 'S'
+  # SOUTH-EAST
+  elif wind_dir_degree < -pi + pi_half + pi_quarter + pi_eighth:
+    wind_dir_label = 'SE'
+  # EAST
+  elif wind_dir_degree < pi_eighth:
+    wind_dir_label = 'E'
+  # NORTH-EAST
+  elif wind_dir_degree < pi_quarter + pi_eighth:
+    wind_dir_label = 'NE'
+  # NORTH
+  elif wind_dir_degree < pi_half + pi_eighth:
+    wind_dir_label = 'N'
+  # NORTH-WEST
+  elif wind_dir_degree < pi_half + pi_quarter + pi_eighth:
+    wind_dir_label = 'NW'
+  # WEST
+  else:
+    wind_dir_label = 'W'
+
+  return wind_dir_label
+
+    
+    
+      
+      
+       
