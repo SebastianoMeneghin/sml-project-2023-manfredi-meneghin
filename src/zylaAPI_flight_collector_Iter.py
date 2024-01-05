@@ -22,6 +22,7 @@ flight_num   = ''
     
 # Insert the limit of your wanted range here:
 # 1 is Jan, 2 is Feb, ...
+year           = 2023
 starting_month = 1
 ending_month   = 12
 starting_day   = 1
@@ -34,7 +35,7 @@ for month in range(starting_month, ending_month + 1):
             compile = False
 
         if compile == True:
-            date_label = get_date_label(2023, month, day, 'hyphen')
+            date_label = get_date_label(year, month, day, 'hyphen')
             print(date_label)
 
             date_from = date_label
