@@ -25,8 +25,3 @@ print(url)
 response = requests.get(url, headers=headers)
 responseJson = response.json()
 print(responseJson)
-
-
-with open("sample3.json", "w") as outfile:
-    json.dump(responseJson, outfile)
-outfile.close()
