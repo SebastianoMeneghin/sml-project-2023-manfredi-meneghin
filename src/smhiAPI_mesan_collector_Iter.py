@@ -20,7 +20,17 @@ target_longitude_up   = 17.876174
 columns = ['date', 'time', 'temperature', 'visibility', 'pressure', 'humidity', 'gusts_wind', 'u_wind', 'v_wind', 'prep_1h', 
                      'snow_1h', 'gradient_snow', 'total_cloud', 'low_cloud', 'medium_cloud', 'high_cloud', 'type_prep', 'sort_prep']
 weather_df = pd.DataFrame(columns=columns)
-#print(weather_df)
+
+###### PART TO BE REMOVED
+file_name = 'checkpoint_53.csv'
+file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/df_checkpoints/'
+complete_name = file_path + file_name
+df = pd.read_csv(complete_name)
+df.drop(columns={'Unnamed: 0'}, inplace=True)
+
+weather_df = df
+###### END OF PART TO BE REMOVED
+
 
 new_row_attr = []
 counter = 0
@@ -29,19 +39,22 @@ checkpoint_counter = 0
 
 # Insert the limit of wanted iteration ranges:
 # For months: 1 is Jan, 2 is Feb, ...
+check_step = 120
 year = 2023
-starting_month = 1
+starting_month = 10
 ending_month   = 12
 starting_day   = 1
 ending_day     = 31
 starting_hour  = 0
 ending_hour    = 23
 
+
 for month in range(starting_month, ending_month + 1):
     for day in range(starting_day, ending_day + 1):
         compile = True
 
-        if (month in {1} and day in {1,2,3,4,5,6}) or (month in {4, 6, 9, 11} and day in {31}) or (month in {2} and day in {29, 30, 31}):
+        # Always imposed limit for query
+        if (month in {4, 6, 9, 11} and day in {31}) or (month in {2} and (year % 4 == 0) and day in {30, 31}) or (month in {2} and (year % 4 != 0) and day in {29, 30, 31}):
                 compile = False
         
         if compile:
@@ -58,7 +71,7 @@ for month in range(starting_month, ending_month + 1):
                 # Get some data with specific formatting to put in url and file name
                 yyyymm = get_year_month_label(year, month, 'empty')
                 yyyymmddhhhh = get_mesan_date_label(year, month, day, hour, 'empty')
-                hh00 = get_padded_hour(hour)
+                hh = get_padded_hour(hour)
 
                 # Create the url depending on the SMHI Historical Data filesystem requirements
                 url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + yyyymm + '/MESAN_' + yyyymmddhhhh + '+000H00M'
@@ -66,7 +79,7 @@ for month in range(starting_month, ending_month + 1):
 
                 print(url)
 
-                file_name = 'ARN_' + new_row_date + '_' + hh00
+                file_name = 'ARN_' + new_row_date + '_' + hh
                 save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_grib/"
                 complete_name = os.path.join(save_path, file_name)
 
@@ -95,8 +108,8 @@ for month in range(starting_month, ending_month + 1):
                 outfile.close()
                 os.remove(complete_name)
 
-                # Save in local memory every ~15min (10s each GRIB file -> 15*60s = 900s -> ~90 files)
-                if (counter % 120 == 0):
+                # Save in local memory every ~20min (10s each GRIB file -> 20*60s = 1200s -> ~120 files)
+                if (counter % check_step == 0):
                     checkpoint_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/df_checkpoints/"
                     checkpoint_name = 'checkpoint_' + get_padded_hour(checkpoint_counter) + '.csv'
                     checkpoint_complete_path = os.path.join(checkpoint_path, checkpoint_name)
@@ -104,7 +117,7 @@ for month in range(starting_month, ending_month + 1):
                     print(checkpoint_complete_path)
 
                     with open(checkpoint_complete_path, "wb") as df_out:
-                        weather_df.to_csv(df_out)
+                        weather_df.to_csv(df_out, index = False)
 
                     df_out.close()
 
