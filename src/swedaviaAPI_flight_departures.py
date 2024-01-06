@@ -1,7 +1,6 @@
 import requests
 import pandas as pd
 import json
-import re
 from utils import get_data, get_month
 
 # Get some data from the SHMI OpenData API
@@ -41,3 +40,28 @@ dep_df['month']         = month_column
 
 
 print(dep_df.head().T)
+
+
+
+### For OAG API
+########### Python 3.2 #############
+import urllib.request, json
+
+try:
+    url = "https://api.oag.com/flight-instances/?DepartureDateTime=2022-12-04&DepartureAirport=ESSA&Content=Status&CodeType=ICAO&Limit=100&version=v2"
+
+    hdr ={
+    # Request headers
+    'Cache-Control': 'no-cache',
+    'Subscription-Key': '1ba6f1f8d11143b698bb576269232c52',
+    }
+
+    req = urllib.request.Request(url, headers=hdr)
+
+    req.get_method = lambda: 'GET'
+    response = urllib.request.urlopen(req)
+    print(response.getcode())
+    print(response.read())
+except Exception as e:
+    print(e)
+####################################
