@@ -93,12 +93,7 @@ for i in range(len(forecast_df.index)):
     datetime_df.loc[len(datetime_df.index)] = [date_value, time_value]
 
     # Move the clock one hour ahead
-    print('prima:')
-    print(yyyy,mm,dd,hh)
     yyyy, mm, dd, hh = one_hour_forward(yyyy, mm, dd, hh)
-    print('poi:')
-    print(yyyy,mm,dd,hh)
-    print('\n')
 
 
 # Create the dataframe where to merge the other two
