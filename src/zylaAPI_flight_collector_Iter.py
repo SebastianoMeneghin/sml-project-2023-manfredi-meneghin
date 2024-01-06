@@ -1,9 +1,7 @@
 import requests
-import pandas as pd
 import json
-import re
 import os
-from utils import get_data, get_month, zylaAPI_url, get_date_label
+from utils import zylaAPI_url, get_date_label
         
 headers = {
     'Authorization': 'Bearer 3109|eaLTjs0WyoNM4J5rV2VzkHvVH1k1zd75X3GLV92Q',

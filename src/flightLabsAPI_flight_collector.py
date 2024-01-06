@@ -1,8 +1,6 @@
 import requests
-import pandas as pd
 import json
-import re
-from utils import get_data, get_month, flight_lab_url
+from utils import flight_lab_url
 
 headers = {
     "Accept": "application/json",

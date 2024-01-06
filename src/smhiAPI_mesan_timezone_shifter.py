@@ -1,9 +1,8 @@
-import requests
 import pandas as pd
+import numpy as np
 import json
 import os
-from utils import get_data, get_month, zylaAPI_url, get_date_label, get_df_label_from_grib_label, get_year_month_label, get_mesan_date_label, get_padded_hour, one_hour_forward, one_hour_backward, one_day_backward, one_day_forward, get_wind_dir_label
-import numpy as np
+from utils import get_date_label, one_hour_forward
 from datetime import datetime
 
 ######################################################################################################

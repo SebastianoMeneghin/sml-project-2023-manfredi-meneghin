@@ -1,11 +1,8 @@
 import requests
 import pandas as pd
 import json
-import re
 import os
-from utils import get_data, get_month, zylaAPI_url, get_date_label, get_df_label_from_grib_label
-import xarray as xr
-import cfgrib
+from utils import get_df_label_from_grib_label
 import pygrib
 
 columns = ['date', 'time', 'temperature', 'visibility', 'pressure', 'humidity', 'gusts_wind', 'u_wind', 'v_wind', 'prep_1h', 

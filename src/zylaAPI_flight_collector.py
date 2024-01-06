@@ -1,8 +1,6 @@
 import requests
-import pandas as pd
 import json
-import re
-from utils import get_data, get_month, zylaAPI_url, get_date_label
+from utils import zylaAPI_url
 
 
 headers = {
