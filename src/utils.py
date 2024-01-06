@@ -430,19 +430,24 @@ def select_zylaAPI_flight_infos(zylaAPI_file_path):
     if (full_day_data.get("data") != None):
         for flight in full_day_data['data']:
             
-            # If depTerminal or depGate are not present in the data, set them to 404
+            # If depTerminal or depGate are not present in the data, set them to 0
             flight_info = {
                 "status": flight["status"],
                 "depApIataCode" : flight["departure"]["iataCode"],
                 "depDelay" : flight["departure"].get("delay", 0),
                 "depScheduledTime": flight["departure"]["scheduledTime"],
-                "depApTerminal": flight["departure"].get("terminal", 404),
-                "depApGate": flight["departure"].get("gate", '404'),
+                "depApTerminal": flight["departure"].get("terminal", 0),
+                "depApGate": flight["departure"].get("gate", '0'),
                 "arrScheduledTime": flight["arrival"]["scheduledTime"],
                 "arrApIataCode": flight["arrival"]["iataCode"],
-                "airlineIataCode": flight["airline"]["iataCode"],
-                "flightIataNumber": flight["flight"]["iataNumber"],
+                "airlineIataCode": flight["airline"].get("iataCode", '0'),
+                "flightIataNumber": flight["flight"].get("iataNumber", '0'),
             }
+
+            if flight_info["airlineIataCode"] == "": 
+                flight_info["airlineIataCode"] = '0'
+            if flight_info["flightIataNumber"] == "": 
+                flight_info["flightIataNumber"] = '0'
 
             flight_infos.append(flight_info)
     
@@ -554,7 +559,9 @@ def num_flight_within(interval_min, flight_df):
                 flight_counter += 1
         
         flight_within.append(flight_counter)
-        print('Flight ' + str(row) + ' has ' + str(flight_counter) + ' flights within ' + str(interval_min) + 'min')
+
+    if (row % 5000 == 0):
+        print('Processed row number: ' + str(row))
     
 
     column_name = 'flight_within_' + str(interval_min) + 'min'
