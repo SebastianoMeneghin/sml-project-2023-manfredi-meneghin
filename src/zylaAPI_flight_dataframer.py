@@ -21,6 +21,17 @@ df.drop(columns={'index'}, inplace = True)
 # Create new columns for future df's data
 new_column_names  = ['date','time', 'month', 'trip_time', 'day_of_week']
 new_column_values = []
+row_to_remove = []
+
+for row in range(df.shape[0]):
+    if df.at[row, 'status'] in {'unknown', 'cancelled'}:
+        row_to_remove.append(row)
+
+
+# Remove the not wanted rows and reset the index
+df.drop(row_to_remove, inplace=True)
+df.reset_index(inplace = True)
+df.drop(columns={'index'}, inplace = True)
 
 
 # Create data for new columns
@@ -54,8 +65,6 @@ df[new_column_names] = new_column_values
 
 # Drop useless columns
 df.drop(columns={'depScheduledTime', 'arrScheduledTime'}, inplace = True)
-
-print(df.head(5).T)
 
 # Save the new dataframe in a new file (.csv)
 ts_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/zylaAPI_flights/"
