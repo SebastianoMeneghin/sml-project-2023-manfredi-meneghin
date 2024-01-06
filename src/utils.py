@@ -429,14 +429,14 @@ def select_zylaAPI_flight_infos(zylaAPI_file_path):
     if (full_day_data.get("data") != None):
         for flight in full_day_data['data']:
             
+            # If depTerminal or depGate are not present in the data, set them to 404
             flight_info = {
                 "status": flight["status"],
                 "depApIataCode" : flight["departure"]["iataCode"],
                 "depDelay" : flight["departure"].get("delay", 0),
                 "depScheduledTime": flight["departure"]["scheduledTime"],
-                "depApEstimatedRunway": flight["departure"].get("estimatedRunway", None),
-                "depApTerminal": flight["departure"].get("terminal", None),
-                "depApGate": flight["departure"].get("gate", None),
+                "depApTerminal": flight["departure"].get("terminal", 404),
+                "depApGate": flight["departure"].get("gate", '404'),
                 "arrScheduledTime": flight["arrival"]["scheduledTime"],
                 "arrApIataCode": flight["arrival"]["iataCode"],
                 "airlineIataCode": flight["airline"]["iataCode"],

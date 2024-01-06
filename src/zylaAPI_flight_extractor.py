@@ -12,7 +12,7 @@ directory_path    = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-m
 
 # Set the directory where to save the data and set the new name
 save_path 		  = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/zylaAPI_flights/'
-file_to_save_name = 'historical_flight_data'
+file_to_save_name = 'historical_flight_data.json'
 complete_name     = save_path + file_to_save_name
 
 print('*Files will be extracted from: \n' + directory_path + '\n\n' + '*Flight info will be saved in file: \n' + file_to_save_name + '\n' + '*in the directory: \n' + save_path)
