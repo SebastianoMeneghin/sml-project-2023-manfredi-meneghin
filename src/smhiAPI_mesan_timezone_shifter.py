@@ -51,14 +51,9 @@ for row in range(df.shape[0]):
 
 
 # Drop the DST deactivation's hour
-print(row_to_drop)
-print(df.loc[7080:7090])
-#print(df.at[row_to_drop[0],'date'], df.at[row_to_drop[0],'time'])
 df.drop(row_to_drop[0], inplace= True)
-print(df.loc[7080:7090])
 
 # Save the new dataframe in a new file (.csv)
-# Save clean dataframe in a new file (.csv)
 ts_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
 ts_name = 'historical_data_time_shifted.csv'
 ts_complete_path = os.path.join(ts_path, ts_name)
