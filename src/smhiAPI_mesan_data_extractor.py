@@ -11,12 +11,8 @@ from utils import get_wind_dir_label
 # noise, simplifying the data visualisation). Then the processed data are saved in a new file.
 ######################################################################################################
 
-# If the index mast be removed, set 'True'
-RAW_DF = True
-checkpoint_num = '53'
-
-file_name = 'checkpoint_' + checkpoint_num + '.csv'
-file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/df_checkpoints/'
+file_name = 'checkpoint_00.csv'
+file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/'
 complete_name = file_path + file_name
 
 df = pd.read_csv(complete_name)
@@ -123,14 +119,10 @@ for row in range(df.shape[0]):
 df.rename(columns={'u_wind': 'wind_speed', 'v_wind': 'wind_dir'}, inplace= True)
 df.drop(columns={'prep_1h', 'snow_1h', 'gradient_snow', 'type_prep'}, inplace=True)
 
-if (RAW_DF):
-    df.drop(columns={'Unnamed: 0'}, inplace=True)
-
-
 
 # Save clean dataframe in a new file (.csv)
-checkpoint_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_forecast/"
-checkpoint_name = 'smhiAPI_mesan_historical_data.csv'
+checkpoint_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
+checkpoint_name = 'historical_data_from_checkpoint.csv'
 checkpoint_complete_path = os.path.join(checkpoint_path, checkpoint_name)
 
 with open(checkpoint_complete_path, "wb") as df_out:

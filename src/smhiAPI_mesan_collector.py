@@ -21,7 +21,7 @@ new_row_attr.append(new_row_time)
 url = "https://opendata-download-grid-archive.smhi.se/data/6/202106/MESAN_202106250000+000H00M"
 response = requests.get(url)
 file_name = "ARN_20210625_00"
-save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_grib/"
+save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
 complete_name = os.path.join(save_path, file_name)
 
 

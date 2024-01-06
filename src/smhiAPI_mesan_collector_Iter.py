@@ -18,29 +18,20 @@ columns = ['date', 'time', 'temperature', 'visibility', 'pressure', 'humidity', 
                      'snow_1h', 'gradient_snow', 'total_cloud', 'low_cloud', 'medium_cloud', 'high_cloud', 'type_prep', 'sort_prep']
 weather_df = pd.DataFrame(columns=columns)
 
-###### PART TO BE REMOVED
-file_name = 'checkpoint_53.csv'
-file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/df_checkpoints/'
-complete_name = file_path + file_name
-df = pd.read_csv(complete_name)
-df.drop(columns={'Unnamed: 0'}, inplace=True)
-
-weather_df = df
-###### END OF PART TO BE REMOVED
-
-
-new_row_attr = []
-counter = 0
+# Create new_row_attr to add future files' rows to the dataframe and set counter to 0
+new_row_attr       = []
+file_counter       = 0
 checkpoint_counter = 0
+
+# Select after how many files a new checkpoint is saved
+check_step = 120    #(10s each GRIB file -> 20*60s = 1200s -> ~120 files)
 
 
 # Insert the limit of wanted iteration ranges:
-# For months: 1 is Jan, 2 is Feb, ...
-check_step = 120
-year = 2023
-starting_month = 10
+year           = 2023
+starting_month = 12
 ending_month   = 12
-starting_day   = 1
+starting_day   = 30
 ending_day     = 31
 starting_hour  = 0
 ending_hour    = 23
@@ -58,7 +49,7 @@ for month in range(starting_month, ending_month + 1):
             new_row_date = get_date_label(year, month, day, 'hyphen')
 
             for hour in range(starting_hour, ending_hour + 1):
-                counter += 1
+                file_counter += 1
                 # Empty the list representing the future df element and append the needed information of the df
                 new_row_attr = []
                 new_row_time = hour
@@ -77,7 +68,7 @@ for month in range(starting_month, ending_month + 1):
                 print(url)
 
                 file_name = 'ARN_' + new_row_date + '_' + hh
-                save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_grib/"
+                save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
                 complete_name = os.path.join(save_path, file_name)
 
 
@@ -105,9 +96,9 @@ for month in range(starting_month, ending_month + 1):
                 outfile.close()
                 os.remove(complete_name)
 
-                # Save in local memory every ~20min (10s each GRIB file -> 20*60s = 1200s -> ~120 files)
-                if (counter % check_step == 0):
-                    checkpoint_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/df_checkpoints/"
+                # Save in local memory every "check_step" read files
+                if (file_counter % check_step == 0):
+                    checkpoint_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
                     checkpoint_name = 'checkpoint_' + get_padded_hour(checkpoint_counter) + '.csv'
                     checkpoint_complete_path = os.path.join(checkpoint_path, checkpoint_name)
 

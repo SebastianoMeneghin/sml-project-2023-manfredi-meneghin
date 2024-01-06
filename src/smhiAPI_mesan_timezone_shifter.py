@@ -15,7 +15,7 @@ from datetime import datetime
 
 # Read a checkpoint or a file (.csv) and load it on a dataframe
 file_name = 'smhiAPI_mesan_historical_data.csv'
-file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_forecast/'
+file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/'
 complete_name = file_path + file_name
 df = pd.read_csv(complete_name)
 
@@ -54,8 +54,8 @@ df.drop(row_to_drop, inplace= True)
 
 # Save the new dataframe in a new file (.csv)
 # Save clean dataframe in a new file (.csv)
-ts_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/time_shifted/"
-ts_name = 'smhiAPI_mesan_historical_data_TS.csv'
+ts_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
+ts_name = 'historical_data_time_shifted.csv'
 ts_complete_path = os.path.join(ts_path, ts_name)
 
 with open(ts_complete_path, "wb") as df_out:
