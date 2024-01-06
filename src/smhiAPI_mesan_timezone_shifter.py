@@ -11,12 +11,12 @@ from datetime import datetime
 # the wanted Time Zone (in this project case is +01:00 ) and to the DST (Daylight Saving Time). This
 # is done since SMHI OpenData provides data that are all around the year saved according to UCT, with 
 # no DST activation. This works only on one year and one place, since the logic depends on the time-zone
-# and on the date of DST activation/deactivation
+# and on the date of DST activation/deactivation. Data are then saved in a new file.
 ######################################################################################################
 
 # Read a checkpoint or a file (.csv) and load it on a dataframe
-file_name = 'checkpoint_53.csv'
-file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/df_checkpoints/'
+file_name = 'smhiAPI_mesan_historical_data.csv'
+file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_forecast/'
 complete_name = file_path + file_name
 df = pd.read_csv(complete_name)
 
@@ -51,6 +51,17 @@ for row in range(df.shape[0]):
 # Drop the DST deactivation's hour
 print(row_to_drop)
 df.drop(row_to_drop, inplace= True)
+
+
+# Save the new dataframe in a new file (.csv)
+# Save clean dataframe in a new file (.csv)
+ts_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/time_shifted/"
+ts_name = 'smhiAPI_mesan_historical_data_TS.csv'
+ts_complete_path = os.path.join(ts_path, ts_name)
+
+with open(ts_complete_path, "wb") as df_out:
+    df.to_csv(df_out, index= False)
+df_out.close()
 
     
     
