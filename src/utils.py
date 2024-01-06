@@ -413,5 +413,56 @@ def one_hour_forward(year, month, day, hour):
     hour = hour + 1
 
   return year, month, day, hour
+
+
+def select_zylaAPI_flight_infos(zylaAPI_file_path):
+    '''
+    From an input zylaAPI's json file containing all the flights of a day,
+    extract the flight_info for each flight and savem them in a list, with
+    a flat format.
+    '''
+    with open(zylaAPI_file_path, 'r') as file:
+        full_day_data = json.load(file)
+
+    flight_infos = []
+
+    if (full_day_data.get("data") != None):
+        for flight in full_day_data['data']:
+            
+            flight_info = {
+                "status": flight["status"],
+                "depApIataCode" : flight["departure"]["iataCode"],
+                "depDelay" : flight["departure"].get("delay", 0),
+                "depScheduledTime": flight["departure"]["scheduledTime"],
+                "depApEstimatedRunway": flight["departure"].get("estimatedRunway", None),
+                "depApTerminal": flight["departure"].get("terminal", None),
+                "depApGate": flight["departure"].get("gate", None),
+                "arrScheduledTime": flight["arrival"]["scheduledTime"],
+                "arrApIataCode": flight["arrival"]["iataCode"],
+                "airlineIataCode": flight["airline"]["iataCode"],
+                "flightIataNumber": flight["flight"]["iataNumber"],
+            }
+
+            flight_infos.append(flight_info)
+    
+    return flight_infos
+
+
+def merge_and_extract_zylaAPI_flight_infos(directory_path):
+    '''
+    From an input director full of zylaAPI's json file, each of them containing all the 
+    flights of a specific day, from a specific airport (in this project Stockholm Arlanda,
+    IATACode: ARN), get the list of all the flights of all the day with the structure specified
+    in function "select_zylaAPI_flight_infos".
+    '''
+    flight_infos = []
+    
+    for filename in os.listdir(directory_path):
+        if filename.endswith(".json"):
+            file_path = os.path.join(directory_path, filename)
+            flight_info = select_zylaAPI_flight_infos(file_path)
+            flight_infos = flight_infos + flight_info
+
+    return flight_infos
   
        
