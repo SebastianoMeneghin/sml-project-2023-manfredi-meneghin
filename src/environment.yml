@@ -15,6 +15,7 @@ dependencies:
 - twofish
 - pygrib
 - eccodes
+- pandasql
 # You also need to install "hopsworks" through "pip install hopsworks"
 # You also need to install "modal" through "pip install modal"
 # You also need to install "cfgrib" through "pip install cfgrib"
