@@ -282,7 +282,7 @@ def get_df_label_from_grib_label(grib_label):
 def get_wind_dir_label(wind_dir_degree):
   '''
   Returns the wind direction label (N, S, W, E, NE, etc...), according
-  to the wind_direction_degree passed as input.
+  to the wind_direction_degree passed as input, in the interval [-180°, +180°].
   '''
   wind_dir_label = ''
 
@@ -321,8 +321,94 @@ def get_wind_dir_label(wind_dir_degree):
 
   return wind_dir_label
 
+
+def one_day_backward(year, month, day):
+  
+  if (day == 1):
+    # If this is the first day of the Year
+    if month == 1:
+      day = 31
+      month = 12
+      year = year - 1
+
+    # If I need to return back to Febraury
+    elif month == 3:
+      # If the current year is a leap year
+      if (year % 4 == 0):
+        day = 29
+      else:
+        day = 28
+
+      month = 2
+
+    # If the previous month has 30 days
+    elif month == 5 or month == 7 or month == 10 or month == 12:
+      day = 30
+      month = month - 1
     
+    else:
+       day = 31
+       month = month - 1
+
+  else:
+     day = day - 1
+
+  return year, month, day
+
+
+def one_day_forward(year, month, day):
+  if month == 12:
+    if day == 31:
+      day = 1
+      month = 1
+      year = year + 1
+    else:
+        day = day + 1
+
+  elif month == 2:
+    if (day == 28):
+      if (year % 4 == 0):
+        day = 29
+      else:
+        day = 1
+        month = 3
+    elif (day == 29):
+      day = 1
+      month = 3
+    else:
+      day = day + 1
     
-      
-      
+  elif month == 4 or month == 6 or month == 9 or month == 11:
+    if (day == 30):
+      month = month + 1
+      day = 1
+    else:
+      day = day + 1
+  
+  else:
+    day = day + 1
+
+  return year, month, day
+         
+
+def one_hour_backward(year, month, day, hour):
+  # If it is midnight, it returns one day back as well
+  if (hour == 0):
+      year, month, day = one_day_backward(year, month, day)
+      hour = 23
+  else:
+    hour = hour - 1
+
+  return year, month, day, hour
+
+
+def one_hour_forward(year, month, day, hour):
+  if (hour == 23):
+    year, month, day = one_day_forward(year, month, day)
+    hour = 0
+  else:
+    hour = hour + 1
+
+  return year, month, day, hour
+  
        
