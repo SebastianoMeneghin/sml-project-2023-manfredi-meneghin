@@ -5,6 +5,7 @@ import json
 import pandas as pd
 import numpy as np
 import math
+from datetime import datetime
 
 # Global values used by different functions
 ZRAD = math.pi / 180
@@ -465,4 +466,96 @@ def merge_and_extract_zylaAPI_flight_infos(directory_path):
 
     return flight_infos
   
-       
+
+def get_day_of_week(year, month, day):
+    '''
+    The function returns the day of the week, given a specific date
+    It works only with date from 2000 to 2099 and it consider as first day (1) Monday,
+    and as last day (7) Sunday.
+    '''
+    leap_year = False
+
+    month_val       = 0
+    day_val         = day
+    year_val        = year - 2000
+    year_val_fourth = math.floor(year_val / 4)
+
+    if (year % 4 == 0):
+        leap_year = True
+
+    #if (month in {4,7}) or (month == 1 and leap_year): month_val = 0
+    if (month == 1 and not leap_year) or (month == 10):
+        month_val = 1
+
+    elif (month == 5):
+        month_val = 2
+
+    elif (month == 2 and leap_year) or (month == 8):
+        month_val = 3
+
+    elif (month == 2 and not leap_year) or (month in {3,11}):
+        month_val = 4
+
+    elif (month == 6):
+        month_val = 5
+
+    elif (month in {9, 12}):
+        month_val = 6
+
+    
+    sum_val = year_val + year_val_fourth + month_val + day_val - 2
+    day_of_week = sum_val % 7
+
+    if(day_of_week == 0):
+        day_of_week = 7
+
+    return day_of_week
+
+
+def num_flight_within(interval_min, flight_df):
+    '''
+    Return for each row of the dataframe, the number of flights departed from the same airport
+    in the interval specified in minutes (-interval_min/2, + interval_min/2)
+    '''
+    # Row range should be reduced or increased depending on the airport
+    row_range = 50
+    total_flight  = flight_df.shape[0]
+    flight_within = []
+
+    for row in range(total_flight):
+        flight_counter = 0
+        temp_df = pd.DataFrame()
+
+        # Get departure time of the flight
+        flight_dep_time = flight_df.at[row, 'depScheduledTime']
+        flight_datetime = datetime.strptime(flight_dep_time, "%Y-%m-%dT%H:%M:%S.%f")
+
+        # Get an adjacent part of the full flight_df to compare with the current flight
+        if row < row_range:
+            temp_df = flight_df[: int(row_range/2)]
+        elif row > total_flight - row_range:
+            temp_df = flight_df[total_flight - int(row_range/2):]
+        else:
+            temp_df = flight_df[int(row - row_range/2) : int(row + row_range/2)]
+
+
+        temp_df.reset_index(inplace=True)
+        
+        for temp_row in range(temp_df.shape[0]):
+            # Get departure time of the temp flight
+            flight_temp_time = temp_df.at[temp_row, 'depScheduledTime']
+            temp_datetime    = datetime.strptime(flight_temp_time, "%Y-%m-%dT%H:%M:%S.%f")
+
+            # Get the delta time and add bring it to minutes
+            delta_time = abs(flight_datetime - temp_datetime)
+            gap_time   = math.ceil(delta_time.total_seconds()/60)
+
+            if (gap_time < interval_min/2):
+                flight_counter += 1
+        
+        flight_within.append(flight_counter)
+        print('Flight ' + str(row) + ' has ' + str(flight_counter) + ' flights within ' + str(interval_min) + 'min')
+    
+
+    column_name = 'flight_within_' + str(interval_min) + 'min'
+    return flight_within, column_name
