@@ -5,7 +5,17 @@ import math
 import numpy as np
 from utils import get_wind_dir_label
 
-file_name = 'checkpoint_53.csv'
+######################################################################################################
+# Here a smhiAPI historical mesan file is read and its values are selected, changed, dropped or
+# transformed, according to various needs (uniforming them with daily forecasting data, removing
+# noise, simplifying the data visualisation). Then the processed data are saved in a new file.
+######################################################################################################
+
+# If the index mast be removed, set 'True'
+RAW_DF = True
+checkpoint_num = '53'
+
+file_name = 'checkpoint_' + checkpoint_num + '.csv'
 file_path = '/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/df_checkpoints/'
 complete_name = file_path + file_name
 
@@ -97,7 +107,7 @@ for row in range(df.shape[0]):
     df.at[row, 'temperature'] = df.at[row, 'temperature'] - 273.15
 
 
-# Get windspeed and wind direction from u and v components
+# Get windspeed and wind direction from u and v components, then rename columns
 for row in range(df.shape[0]):
     u_wind = df.at[row, 'u_wind']
     v_wind = df.at[row, 'v_wind']
@@ -111,4 +121,19 @@ for row in range(df.shape[0]):
     df.at[row, 'v_wind'] = wind_dir_label
 
 df.rename(columns={'u_wind': 'wind_speed', 'v_wind': 'wind_dir'}, inplace= True)
+df.drop(columns={'prep_1h', 'snow_1h', 'gradient_snow', 'type_prep'}, inplace=True)
+
+if (RAW_DF):
+    df.drop(columns={'Unnamed: 0'}, inplace=True)
+
+
+
+# Save clean dataframe in a new file (.csv)
+checkpoint_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_forecast/"
+checkpoint_name = 'smhiAPI_mesan_historical_data.csv'
+checkpoint_complete_path = os.path.join(checkpoint_path, checkpoint_name)
+
+with open(checkpoint_complete_path, "wb") as df_out:
+    df.to_csv(df_out, index= False)
+df_out.close()
 
