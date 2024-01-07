@@ -2,6 +2,8 @@ import requests
 import pygrib
 import pandas as pd
 import numpy as np
+import math
+import re
 import json
 import os
 from io import BytesIO
@@ -365,20 +367,7 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     weather_df = pd.DataFrame(columns=columns)
 
     # Create new_row_attr to add future files' rows to the dataframe and set counter to 0
-    new_row_attr       = []
-    file_counter       = 0
-    checkpoint_counter = 0
-
-    # Select after how many files a new checkpoint is saved
-    check_step = 120    #(10s each GRIB file -> 20*60s = 1200s -> ~120 files)
-
-
-    # Insert the limit of wanted iteration ranges:
-    mesan_year    = year
-    mesan_month   = month
-    mesan_day     = day
-    starting_hour = 0
-    ending_hour   = 23
+    new_row_attr = []
 
     date_label = get_date_label(year, month, day, 'hyphen')
 
@@ -392,15 +381,18 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     # Get pairs of (stockholm hour -> grib_datestamps)
     datestamp_dict = smhiAPI_get_daily_grib_datestamps(year, month, day, dst)
 
-    print(datestamp_dict)
 
+    counter = 0
     for datestamp in datestamp_dict.items():
+        counter += 1
+        if (counter > 3):
+            break
+
         new_row_attr = []
         new_row_time = datestamp[0]
         new_row_attr.append(date_label)
         new_row_attr.append(new_row_time)
 
-        print(datestamp)
         hour_grib_url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + datestamp[1]
         hour_response = requests.get(hour_grib_url)
 
@@ -420,20 +412,150 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
                                 'Snowfall (convective + stratiform) gradient', 'Total cloud cover', 'Low cloud cover', 
                                 'Medium cloud cove', 'High cloud cover', 'Type of precipitation', 'Sort of precipitation']:
                         
-                print(label)
                 #df_label = get_df_label_from_grib_label(label)
                 temp_grb = grib_file.select(name=label)[0]
                 part, latss, lotss = temp_grb.data(lat1=target_latitude_down,lat2=target_latitude_up,lon1=target_longitude_down,lon2=target_longitude_up)
 
                 new_row_attr.append(part[0])
-                print(part[0])
-                print(new_row_attr)
 
 
             weather_df.loc[len(weather_df.index)] = new_row_attr
 
         outfile.close()
         os.remove(complete_name)
+
+    # Reset the index and drop the old column
+    weather_df.reset_index(inplace = True)
+    weather_df.drop(columns={'index'}, inplace = True)
+
+    # Make humidity a categorical value
+    for row in range(weather_df.shape[0]):
+        humidity = weather_df.at[row,'humidity']
+
+        if humidity < 0.375:
+            weather_df.at[row,'humidity'] = 1
+
+        elif humidity < 0.5:
+            weather_df.at[row,'humidity'] = 2
+
+        elif humidity < 0.625:
+            weather_df.at[row,'humidity'] = 3
+
+        elif humidity < 0.75:
+            weather_df.at[row,'humidity'] = 4
+
+        elif humidity < 0.875:
+            weather_df.at[row,'humidity'] = 5
+
+        elif humidity:
+            weather_df.at[row,'humidity'] = 6
+
+
+    # Make cloud cover categorical values (octas)
+    cloud_labels = ['total_cloud', 'medium_cloud', 'high_cloud', 'low_cloud']
+    for row in range(weather_df.shape[0]):
+        for label in cloud_labels:
+            cloud_level = weather_df.at[row, label]
+
+            if cloud_level < 1/16:
+                weather_df.at[row, label] = 0
+
+            elif cloud_level < 3/16:
+                weather_df.at[row, label] = 1
+
+            elif cloud_level < 5/16:
+                weather_df.at[row, label] = 2
+
+            elif cloud_level < 7/16:
+                weather_df.at[row, label] = 3
+
+            elif cloud_level < 9/16:
+                weather_df.at[row, label] = 4
+
+            elif cloud_level < 11/16:
+                weather_df.at[row, label] = 5
+
+            elif cloud_level < 13/16:
+                weather_df.at[row, label] = 6
+
+            elif cloud_level < 15/16:
+                weather_df.at[row, label] = 7
+
+            else:
+                weather_df.at[row, label] = 8
+
+
+    # Bring visibility to km instead of m
+    for row in range(weather_df.shape[0]):
+        weather_df.at[row, 'visibility'] = weather_df.at[row, 'visibility'] / 1000
+
+
+    # Bring pressure to hPa instead of Pa
+    for row in range(weather_df.shape[0]):
+        weather_df.at[row, 'pressure'] = weather_df.at[row, 'pressure'] / 100
+
+    # Make pressure a categorical variable (binning)
+    min_pressure = 970
+    max_pressure = 1060
+    num_interval = 8
+    division_gap = (max_pressure - min_pressure)/num_interval
+
+    for row in range(weather_df.shape[0]):
+        pressure = weather_df.at[row,'pressure']
+
+        for multiplier in range(1, num_interval):
+            if pressure < min_pressure + multiplier*division_gap:
+                weather_df.at[row,'pressure'] = multiplier
+                break;
+
+    # Bring temperature to Celsius instead of Kelvin
+    for row in range(weather_df.shape[0]):
+        weather_df.at[row, 'temperature'] = weather_df.at[row, 'temperature'] - 273.15
+
+
+    # Get windspeed and wind direction from u and v components, then rename columns
+    for row in range(weather_df.shape[0]):
+        u_wind = weather_df.at[row, 'u_wind']
+        v_wind = weather_df.at[row, 'v_wind']
+
+        wind_speed = math.sqrt(pow(u_wind, 2) + pow(v_wind, 2))
+        wind_dir   = np.arctan2(v_wind, u_wind) * (180 / np.pi)
+
+        wind_dir_label = get_wind_dir_label(wind_dir)
+
+        weather_df.at[row, 'u_wind'] = wind_speed
+        weather_df.at[row, 'v_wind'] = wind_dir_label
+
+    # Remove useless columns
+    weather_df.rename(columns={'u_wind': 'wind_speed', 'v_wind': 'wind_dir'}, inplace= True)
+    weather_df.drop(columns={'prep_1h', 'snow_1h', 'gradient_snow', 'type_prep'}, inplace=True)
+
+    # Reset the index and drop the old column
+    weather_df.reset_index(inplace = True)
+    weather_df.drop(columns={'index'}, inplace = True)
+
+    print('\n\n**Process finished**\n\n')
+
+    # Return the calculated dataframe
+    return weather_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # AT THE END:
+    # Return dataframe
 
 
 
@@ -483,9 +605,10 @@ def smhiAPI_acquire_daily_mesan(mode):
     # Save the selected date to further save the created file
     selected_date = get_date_label(year, month, day, 'hyphen')
 
+    total_df = pd.DataFrame()
     # If mode is 'yesterday', roll-back to the historical data extraction process
     if (mode == 'yesterday'):
-        smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day)
+        total_df = smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day)
 
     # if the mode is 'today', proceed with the extraction through smhiAPI MESAN Analysis
     else:
@@ -641,7 +764,7 @@ def smhiAPI_acquire_daily_mesan(mode):
 
     
 
-    ### FIX THE NAME
+    ### ADD RETURN FUNCTION
     # Save the forecast dataframe in a new file (.csv)
     ts_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_daily_data/"
     ts_name = 'mesan_' + selected_date + '.csv'
