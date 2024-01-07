@@ -327,6 +327,10 @@ def get_wind_dir_label(wind_dir_degree):
 
 
 def one_day_backward(year, month, day):
+  '''
+  Return "year", "month" and "day" numbers of the day before the inserted day
+  It works for all the possible years from 1592
+  '''
   
   if (day == 1):
     # If this is the first day of the Year
@@ -361,6 +365,10 @@ def one_day_backward(year, month, day):
 
 
 def one_day_forward(year, month, day):
+  '''
+  Return "year", "month" and "day" numbers of the day after the inserted day
+  It works for all the possible years from 1592
+  '''
   if month == 12:
     if day == 31:
       day = 1
@@ -396,6 +404,11 @@ def one_day_forward(year, month, day):
          
 
 def one_hour_backward(year, month, day, hour):
+  '''
+  Return "year", "month" and "day" and "hour" numbers of the hour before the inserted hour
+  It does not consider the DST, since it is not related to any location or time-zone
+  '''
+
   # If it is midnight, it returns one day back as well
   if (hour == 0):
       year, month, day = one_day_backward(year, month, day)
@@ -407,6 +420,10 @@ def one_hour_backward(year, month, day, hour):
 
 
 def one_hour_forward(year, month, day, hour):
+  '''
+  Return "year", "month" and "day" and "hour" numbers of the hour after the inserted hour
+  It does not consider the DST, since it is not related to any location or time-zone
+  '''
   if (hour == 23):
     year, month, day = one_day_forward(year, month, day)
     hour = 0
@@ -563,3 +580,25 @@ def num_flight_within(interval_min, flight_df):
 
     column_name = 'flight_within_' + str(interval_min) + 'min'
     return flight_within, column_name
+
+
+def get_today_date():
+    '''
+    Return today's year, month and day numbers
+    '''
+    # Get today's date through TimeAPI
+    time_url = "https://worldtimeapi.org/api/timezone/Europe/Stockholm"
+    time_response     = requests.get(time_url)
+    time_responseJson = time_response.json()
+
+    # Extract datetime
+    datetime_str    = time_responseJson["datetime"]
+    datetime_object = datetime.fromisoformat(datetime_str[:-6])  # Remove the timezone offset for parsing
+
+    # Extract components from datetime
+    day   = datetime_object.day
+    month = datetime_object.month
+    year  = datetime_object.year
+
+    return year, month, day
+
