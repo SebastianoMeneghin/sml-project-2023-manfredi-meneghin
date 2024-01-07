@@ -534,10 +534,11 @@ def get_day_of_week(year, month, day):
     return day_of_week
 
 
-def num_flight_within(interval_min, flight_df):
+def zylaAPI_num_flight_within(interval_min, flight_df):
     '''
     Return for each row of the dataframe, the number of flights departed from the same airport
-    in the interval specified in minutes (-interval_min/2, + interval_min/2)
+    in the interval specified in minutes (-interval_min/2, + interval_min/2).
+    This works with swedaviaAPI flights info, having datetime_format "%Y-%m-%dT%H:%M:%S.%f"
     '''
     # Row range should be reduced or increased depending on the airport
     row_range = 50
