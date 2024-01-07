@@ -559,9 +559,6 @@ def num_flight_within(interval_min, flight_df):
                 flight_counter += 1
         
         flight_within.append(flight_counter)
-
-    if (row % 5000 == 0):
-        print('Processed row number: ' + str(row))
     
 
     column_name = 'flight_within_' + str(interval_min) + 'min'
