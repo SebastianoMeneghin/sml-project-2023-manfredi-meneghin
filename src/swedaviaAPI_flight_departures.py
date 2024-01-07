@@ -48,6 +48,40 @@ def swedaviaAPI_flight_delay(scheduledDepTime, actualDepTime):
         return 0
     else:
         return delay_minutes
+    
+
+def swedaviaAPI_correct_UCT(time):
+    '''
+    Given a time in the format "%Y-%m-%dT%H:%M:%SZ" (format of SwedaviaAPI), return the
+    equivalent time in Stockholm Time (+01:00 or +02:00 when DST on).
+    It works only for the 2024, due to different DST condition year by year.
+    '''
+
+    # Destructure the received time
+    datetime_format = "%Y-%m-%dT%H:%M:%SZ"
+    scheduled_datetime = datetime.strptime(time, datetime_format)
+    
+    yyyy    = scheduled_datetime.year
+    mm      = scheduled_datetime.month
+    dd      = scheduled_datetime.day
+    hh      = scheduled_datetime.hour
+    minutes = scheduled_datetime.minute
+    ss      = scheduled_datetime.second
+
+    if (yyyy != 2024):
+        raise Exception("It works only with dates belonging to 2024")
+    
+    # According to the time-zone differences, the clock is moved forward or backward (In Sweden 2023: +01:00)
+    yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
+
+    # Set the clock an additional hour ahead when the DST was active (Sweden 2024, from 31st March - 01:00 (UCT00:00) to 27th October - 01:00 (UCT00:00))
+    if (mm == 3 and dd == 31 and hh >= 1) or (mm in {4,5,6,7,8,9}) or (mm == 10 and dd <= 26) or (mm == 10 and dd == 27 and hh <= 1):
+        yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
+
+    # Calculate now stockholm time and create a string with the required datetime_format
+    stockholm_time = datetime(yyyy, mm, dd, hh, minutes, ss).strftime(datetime_format)
+
+    return stockholm_time
 
 
 def swedaviaAPI_daily_collector(mode):
@@ -101,10 +135,10 @@ def swedaviaAPI_daily_collector(mode):
                 "status"           : str(flight["locationAndStatus"]["flightLegStatusEnglish"]).lower(),
                 "depApIataCode"    : str(flight["flightLegIdentifier"]["departureAirportIata"]).lower(),
                 "depDelay"         : swedaviaAPI_flight_delay(flight["departureTime"]["scheduledUtc"], flight["departureTime"]["actualUtc"]),
-                "depScheduledTime" : flight["departureTime"]["scheduledUtc"],
+                "depScheduledTime" : swedaviaAPI_correct_UCT(flight["departureTime"]["scheduledUtc"]),
                 "depApTerminal"    : int(re.findall(terminal_pattern, flight["locationAndStatus"].get("terminal", 0))[0]),
                 "depApGate"        : str(flight["locationAndStatus"].get("gate", 0)).lower(),
-                "arrScheduledTime" : flight.get("arrivalTime", flight["departureTime"]["scheduledUtc"]),
+                "arrScheduledTime" : swedaviaAPI_correct_UCT(flight.get("arrivalTime", flight["departureTime"]["scheduledUtc"])),
                 "arrApIataCode"    : str(flight["flightLegIdentifier"]["arrivalAirportIata"]).lower(),
                 "airlineIataCode"  : str(flight["airlineOperator"].get("iata", '0')).lower(),
                 "flightIataNumber" : str(flight.get("flightId", '0')).lower(),
@@ -122,7 +156,6 @@ def swedaviaAPI_daily_collector(mode):
     with open(complete_path, 'w') as output_file:
         print(json.dumps(flight_infos, indent=2), file=output_file)
     output_file.close()
-
 
 
 swedaviaAPI_daily_collector('yesterday')
