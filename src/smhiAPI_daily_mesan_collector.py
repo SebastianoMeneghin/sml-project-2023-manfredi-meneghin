@@ -1,9 +1,10 @@
 import requests
+import pygrib
 import pandas as pd
 import numpy as np
 import json
 import os
-from utils import get_date_label, get_padded_hour, one_hour_forward, one_hour_backward, get_wind_dir_label, one_day_backward
+from utils import get_date_label, one_hour_forward, one_hour_backward, get_wind_dir_label
 from datetime import datetime
 
 
@@ -39,7 +40,183 @@ def smhiAPI_get_hour_from_datetime(timestamp):
     hour            = datetime_ts.hour
 
     return hour
-    
+
+
+def get_year_month_label(year, month, mode):
+  '''
+  Return the year_month in the format wanted by the different APIs file structure, by passing 
+  the year, month and the mode. It pads with 0 when needed. The "mode" can be specified 
+  between "hyphen", "underscore" and "empty" and it determines which divider you will find in
+  the year_month_label between the different input passed (e.g. 2024-01 or 20240105)
+  '''
+  year_month_label = ''
+
+  year_label = str(year)
+  month_label = ''
+  if month not in {10, 11, 12}:
+    month_label = '0' + str(month)
+  else:
+    month_label = str(month)
+  
+  if mode == 'hyphen':
+    year_month_label = year_label + '-' + month_label
+  elif mode == 'underscore':
+    year_month_label = year_label + '_' + month_label
+  elif mode == 'empty':
+    year_month_label = year_label + month_label
+
+  return year_month_label
+
+
+def get_date_label(year, month, day, mode):
+  ''' 
+  Return the date in the format wanted by the different APIs file structure, by passing 
+  the year, month, day and the mode. It pads with 0 when needed. The "mode" can be specified 
+  between "hyphen", "underscore" and "empty" and it determines which divider you will find in
+  the date_label between the different input passed (e.g. 2024-01-05 or 20240105)
+  '''
+
+  date_label = ''
+  year_month_label = get_year_month_label(year, month, mode)
+  
+  day_label = ''
+  if day < 10:
+      day_label = '0' + str(day)
+  else:
+      day_label = str(day)
+  
+  if mode == 'hyphen':
+    date_label = year_month_label + '-' + day_label
+  elif mode == 'underscore':
+    date_label = year_month_label + '_' + day_label
+  elif mode == 'empty':
+    date_label = year_month_label + day_label
+
+  return date_label
+
+
+def get_padded_hour(hour):
+  '''
+  Given an hour (int) return back the hour in the format hh (str)
+  (e.g. get_padded_hour(1) -> 01, get_padded_hour(15) -> 15).
+  '''
+  hour_label = '' 
+  
+  if hour < 10:
+    hour_label = '0' + str(hour)
+  else:
+    hour_label = str(hour)
+
+  return hour_label
+
+
+def get_mesan_date_label(year, month, day, hour, mode):
+  '''
+  Get the date/timestamp in the format wanted by the SMHI Historical API file structure, by passing 
+  the year, month, day and hour. It pads with 0 when needed.
+  '''
+  mesan_label = ''
+  hour_label = get_padded_hour(hour) + '00'
+  date_label = get_date_label(year, month, day, mode)
+  
+  if mode == 'hyphen':
+    mesan_label = date_label + '-' + hour_label
+  elif mode == 'underscore':
+    mesan_label = date_label + '_' + hour_label
+  elif mode == 'empty':
+    mesan_label = date_label + hour_label
+  
+  return mesan_label
+
+
+def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
+    '''
+    Get the daily MESAN analysis of a specific day. It get the online GRIB file from smhiAPI OpenData
+    and give as result dataframe with all the uniformized and casted data, according to the rest of the project.
+    '''
+    # Set the latitude and longitude limits
+    target_latitude_down  = 59.575368
+    target_latitude_up    = 59.600368
+    target_longitude_down = 17.875208
+    target_longitude_up   = 17.876174
+
+    # Set the skeleton of the dataframe
+    columns = ['date', 'time', 'temperature', 'visibility', 'pressure', 'humidity', 'gusts_wind', 'u_wind', 'v_wind', 'prep_1h', 
+                        'snow_1h', 'gradient_snow', 'total_cloud', 'low_cloud', 'medium_cloud', 'high_cloud', 'type_prep', 'sort_prep']
+    weather_df = pd.DataFrame(columns=columns)
+
+    # Create new_row_attr to add future files' rows to the dataframe and set counter to 0
+    new_row_attr       = []
+    file_counter       = 0
+    checkpoint_counter = 0
+
+    # Select after how many files a new checkpoint is saved
+    check_step = 120    #(10s each GRIB file -> 20*60s = 1200s -> ~120 files)
+
+
+    # Insert the limit of wanted iteration ranges:
+    mesan_year    = year
+    mesan_month   = month
+    mesan_day     = day
+    starting_hour = 0
+    ending_hour   = 23
+
+    # Always imposed limit for query
+    if (month in {4, 6, 9, 11} and day in {31}) or (month in {2} and (year % 4 == 0) and day in {30, 31}) or (month in {2} and (year % 4 != 0) and day in {29, 30, 31}):
+        raise Exception('This day does not exist')
+        
+    new_row_date = get_date_label(year, month, day, 'hyphen')
+
+    for hour in range(starting_hour, ending_hour + 1):
+        file_counter += 1
+        # Empty the list representing the future df element and append the needed information of the df
+        new_row_attr = []
+        new_row_time = hour
+        new_row_attr.append(new_row_date)
+        new_row_attr.append(new_row_time)
+
+        # Get some data with specific formatting to put in url and file name
+        yyyymm = get_year_month_label(year, month, 'empty')
+        yyyymmddhhhh = get_mesan_date_label(year, month, day, hour, 'empty')
+        hh = get_padded_hour(hour)
+
+        # Create the url depending on the SMHI Historical Data filesystem requirements
+        url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + yyyymm + '/MESAN_' + yyyymmddhhhh + '+000H00M'
+        response = requests.get(url)
+
+        print(url)
+
+        file_name = 'ARN_' + new_row_date + '_' + hh
+        save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
+        complete_name = os.path.join(save_path, file_name)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def smhiAPI_acquire_daily_mesan(mode):
     '''
@@ -47,21 +224,22 @@ def smhiAPI_acquire_daily_mesan(mode):
     Depending on the 'mode', that can be 'yesterday' or 'today'
     '''
 
+    year, month, day, hour, dst = get_current_date_time_and_dst()
+
+    # Set the time to midnight
+    hour = 0
+
+    # Save the selected date to further save the created file
+    selected_date = get_date_label(year, month, day, 'hyphen')
+
+    # If mode is 'yesterday', roll-back to the historical data extraction process
     if (mode == 'yesterday'):
-        #call another function
-        ciao = 1
+        smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day)
 
+    # if the mode is 'today', proceed with the extraction through smhiAPI MESAN Analysis
     else:
-
+        # Select the maximum numbers of hours that can be retrieved by the 'today' mode
         time_range_hour = 24
-        year, month, day, hour, dst = get_current_date_time_and_dst()
-
-        # Set the time to midnight
-        hour = 0
-
-        # Save the selected date to further save the created file
-        selected_date = get_date_label(year, month, day, 'hyphen')
-
 
         # Set the skeleton of the dataframe
         mesan_df_columns = ["t", "vis", "msl", "r", "gust", "ws", "wd", "tcc_mean", "lcc_mean", "mcc_mean", "hcc_mean", "pcat"]
