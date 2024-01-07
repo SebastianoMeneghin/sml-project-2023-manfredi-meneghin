@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import json
 import os
+from io import BytesIO
 from datetime import datetime
 
 
@@ -379,6 +380,8 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     starting_hour = 0
     ending_hour   = 23
 
+    date_label = get_date_label(year, month, day, 'hyphen')
+
     # Always imposed limit for query
     if (month in {4, 6, 9, 11} and day in {31}) or (month in {2} and (year % 4 == 0) and day in {30, 31}) or (month in {2} and (year % 4 != 0) and day in {29, 30, 31}):
         raise Exception('This day does not exist')
@@ -389,14 +392,48 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     # Get pairs of (stockholm hour -> grib_datestamps)
     datestamp_dict = smhiAPI_get_daily_grib_datestamps(year, month, day, dst)
 
-    for datestamp in datestamp_dict.values():
-        hour_grib_url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + datestamp
-        hour_response = requests.get(hour_grib_url)
-        print(hour_grib_url)
+    print(datestamp_dict)
 
-        file_name = 'ARN_' + new_row_date + '_' + hh
+    for datestamp in datestamp_dict.items():
+        new_row_attr = []
+        new_row_time = datestamp[0]
+        new_row_attr.append(date_label)
+        new_row_attr.append(new_row_time)
+
+        print(datestamp)
+        hour_grib_url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + datestamp[1]
+        hour_response = requests.get(hour_grib_url)
+
+        file_name = 'smhiAPI_' + date_label + '_' + get_padded_hour(datestamp[0])
         save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
         complete_name = os.path.join(save_path, file_name)
+
+
+        with open(complete_name, "wb") as outfile: 
+            outfile.write(hour_response.content)
+
+            grib_path = complete_name
+            grib_file = pygrib.open(grib_path)
+
+            for label in ['Temperature', 'Visibility', 'Pressure reduced to MSL', 'Relative humidity', 'Wind gusts', 'u-component of wind', 
+                                'v-component of wind', '1 hour precipitation', '1 hour fresh snow cover', 
+                                'Snowfall (convective + stratiform) gradient', 'Total cloud cover', 'Low cloud cover', 
+                                'Medium cloud cove', 'High cloud cover', 'Type of precipitation', 'Sort of precipitation']:
+                        
+                print(label)
+                #df_label = get_df_label_from_grib_label(label)
+                temp_grb = grib_file.select(name=label)[0]
+                part, latss, lotss = temp_grb.data(lat1=target_latitude_down,lat2=target_latitude_up,lon1=target_longitude_down,lon2=target_longitude_up)
+
+                new_row_attr.append(part[0])
+                print(part[0])
+                print(new_row_attr)
+
+
+            weather_df.loc[len(weather_df.index)] = new_row_attr
+
+        outfile.close()
+        os.remove(complete_name)
 
 
 
