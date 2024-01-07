@@ -6,6 +6,7 @@ import math
 import re
 import json
 import os
+import time
 from io import BytesIO
 from datetime import datetime
 
@@ -180,6 +181,7 @@ def get_current_date_time_and_dst():
     year  = datetime_object.year
     hour  = datetime_object.hour
 
+    time_response.close()
     return year, month, day, hour, dst
 
 
@@ -381,12 +383,8 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     # Get pairs of (stockholm hour -> grib_datestamps)
     datestamp_dict = smhiAPI_get_daily_grib_datestamps(year, month, day, dst)
 
-
-    counter = 0
+    # Get grib data from each datestamp
     for datestamp in datestamp_dict.items():
-        counter += 1
-        if (counter > 3):
-            break
 
         new_row_attr = []
         new_row_time = datestamp[0]
@@ -423,6 +421,8 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
 
         outfile.close()
         os.remove(complete_name)
+
+    print('Processing meteorological data about:' + date_label)
 
     # Reset the index and drop the old column
     weather_df.reset_index(inplace = True)
@@ -540,57 +540,6 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     return weather_df
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # AT THE END:
-    # Return dataframe
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def smhiAPI_acquire_daily_mesan(mode):
     '''
     Acquire the daily mesan analysis of one full day from smhiAPI Forecast
@@ -608,10 +557,18 @@ def smhiAPI_acquire_daily_mesan(mode):
     total_df = pd.DataFrame()
     # If mode is 'yesterday', roll-back to the historical data extraction process
     if (mode == 'yesterday'):
-        total_df = smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day)
+        yearbefore, monthbefore, daybefore = one_day_backward(year, month, day)
+        datebefore                         = get_date_label(yearbefore, monthbefore, daybefore, 'hyphen')
+        
+        print('Acquiring meteorological data about:' + datebefore)
+
+        selected_date = datebefore
+        total_df      = smhiAPI_acquire_daily_mesan_historical_plugin(yearbefore, monthbefore, daybefore, dst)
 
     # if the mode is 'today', proceed with the extraction through smhiAPI MESAN Analysis
     else:
+        print('Acquiring meteorological data about:' + selected_date)
+
         # Select the maximum numbers of hours that can be retrieved by the 'today' mode
         time_range_hour = 24
 
@@ -624,6 +581,7 @@ def smhiAPI_acquire_daily_mesan(mode):
         response     = requests.get(mesan_url)
         responseJson = response.json()
 
+        print('Processing meteorological data about:' + selected_date)
 
         # The desired_valid_time will change during the day
         hour_limit = 0
@@ -760,11 +718,9 @@ def smhiAPI_acquire_daily_mesan(mode):
                 total_df.at[row,'humidity'] = 5
 
             elif humidity:
-                total_df.at[row,'humidity'] = 6
+                total_df.at[row,'humidity'] = 6 
 
     
-
-    ### ADD RETURN FUNCTION
     # Save the forecast dataframe in a new file (.csv)
     ts_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_daily_data/"
     ts_name = 'mesan_' + selected_date + '.csv'
@@ -775,5 +731,7 @@ def smhiAPI_acquire_daily_mesan(mode):
     total_df_out.close()
 
 
+
 smhiAPI_acquire_daily_mesan('today')
 smhiAPI_acquire_daily_mesan('yesterday')
+print('done')
