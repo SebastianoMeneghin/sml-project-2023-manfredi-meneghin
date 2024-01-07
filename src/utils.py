@@ -112,6 +112,10 @@ def zylaAPI_url(type, code, dep_iataCode, arr_iataCode, date_from, date_to, airl
 
 
 def get_padded_hour(hour):
+  '''
+  Given an hour (int) return back the hour in the format hh (str)
+  (e.g. get_padded_hour(1) -> 01, get_padded_hour(15) -> 15).
+  '''
   hour_label = '' 
   
   if hour < 10:
@@ -120,6 +124,7 @@ def get_padded_hour(hour):
     hour_label = str(hour)
 
   return hour_label
+
 
 def get_year_month_label(year, month, mode):
   '''
@@ -174,9 +179,11 @@ def get_date_label(year, month, day, mode):
   return date_label
 
 
-# Get the date/timestamp in the format wanted by the SMHI Historical API file structure, by passing 
-# the year, month, day and hour. It pads with 0 when needed.
 def get_mesan_date_label(year, month, day, hour, mode):
+  '''
+  Get the date/timestamp in the format wanted by the SMHI Historical API file structure, by passing 
+  the year, month, day and hour. It pads with 0 when needed.
+  '''
   mesan_label = ''
   hour_label = get_padded_hour(hour) + '00'
   date_label = get_date_label(year, month, day, mode)
