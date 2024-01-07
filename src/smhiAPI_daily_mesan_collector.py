@@ -4,8 +4,157 @@ import pandas as pd
 import numpy as np
 import json
 import os
-from utils import get_date_label, one_hour_forward, one_hour_backward, get_wind_dir_label
 from datetime import datetime
+
+
+def get_wind_dir_label(wind_dir_degree):
+  '''
+  Returns the wind direction label (N, S, W, E, NE, etc...), according
+  to the wind_direction_degree passed as input, in the interval [-180°, +180°].
+  '''
+  wind_dir_label = ''
+
+  pi         = 180
+  pi_half    = pi/2
+  pi_quarter = pi/4
+  pi_eighth  = pi/8
+
+  # WEST
+  if wind_dir_degree < -pi + pi_eighth:
+    wind_dir_label = 'W'
+  # SOUTH-WEST
+  elif wind_dir_degree < -pi + pi_quarter + pi_eighth:
+    wind_dir_label = 'SW'
+  # SOUTH
+  elif wind_dir_degree < -pi + pi_half + pi_eighth:
+    wind_dir_label = 'S'
+  # SOUTH-EAST
+  elif wind_dir_degree < -pi + pi_half + pi_quarter + pi_eighth:
+    wind_dir_label = 'SE'
+  # EAST
+  elif wind_dir_degree < pi_eighth:
+    wind_dir_label = 'E'
+  # NORTH-EAST
+  elif wind_dir_degree < pi_quarter + pi_eighth:
+    wind_dir_label = 'NE'
+  # NORTH
+  elif wind_dir_degree < pi_half + pi_eighth:
+    wind_dir_label = 'N'
+  # NORTH-WEST
+  elif wind_dir_degree < pi_half + pi_quarter + pi_eighth:
+    wind_dir_label = 'NW'
+  # WEST
+  else:
+    wind_dir_label = 'W'
+
+  return wind_dir_label
+
+
+def one_day_backward(year, month, day):
+  '''
+  Return "year", "month" and "day" numbers of the day before the inserted day
+  It works for all the possible years from 1592
+  '''
+  
+  if (day == 1):
+    # If this is the first day of the Year
+    if month == 1:
+      day = 31
+      month = 12
+      year = year - 1
+
+    # If I need to return back to Febraury
+    elif month == 3:
+      # If the current year is a leap year
+      if (year % 4 == 0):
+        day = 29
+      else:
+        day = 28
+
+      month = 2
+
+    # If the previous month has 30 days
+    elif month == 5 or month == 7 or month == 10 or month == 12:
+      day = 30
+      month = month - 1
+    
+    else:
+       day = 31
+       month = month - 1
+
+  else:
+     day = day - 1
+
+  return year, month, day
+
+
+def one_day_forward(year, month, day):
+  '''
+  Return "year", "month" and "day" numbers of the day after the inserted day
+  It works for all the possible years from 1592
+  '''
+  if month == 12:
+    if day == 31:
+      day = 1
+      month = 1
+      year = year + 1
+    else:
+        day = day + 1
+
+  elif month == 2:
+    if (day == 28):
+      if (year % 4 == 0):
+        day = 29
+      else:
+        day = 1
+        month = 3
+    elif (day == 29):
+      day = 1
+      month = 3
+    else:
+      day = day + 1
+    
+  elif month == 4 or month == 6 or month == 9 or month == 11:
+    if (day == 30):
+      month = month + 1
+      day = 1
+    else:
+      day = day + 1
+  
+  else:
+    day = day + 1
+
+  return year, month, day
+         
+
+def one_hour_backward(year, month, day, hour):
+  '''
+  Return "year", "month" and "day" and "hour" numbers of the hour before the inserted hour
+  It does not consider the DST, since it is not related to any location or time-zone
+  '''
+
+  # If it is midnight, it returns one day back as well
+  if (hour == 0):
+      year, month, day = one_day_backward(year, month, day)
+      hour = 23
+  else:
+    hour = hour - 1
+
+  return year, month, day, hour
+
+
+def one_hour_forward(year, month, day, hour):
+  '''
+  Return "year", "month" and "day" and "hour" numbers of the hour after the inserted hour
+  It does not consider the DST, since it is not related to any location or time-zone
+  '''
+  if (hour == 23):
+    year, month, day = one_day_forward(year, month, day)
+    hour = 0
+  else:
+    hour = hour + 1
+
+  return year, month, day, hour
 
 
 def get_current_date_time_and_dst():
@@ -129,6 +278,40 @@ def get_mesan_date_label(year, month, day, hour, mode):
   return mesan_label
 
 
+def swedaviaAPI_correct_UCT(time):
+    '''
+    Given a time in the format "%Y-%m-%dT%H:%M:%SZ" (format of SwedaviaAPI), return the
+    equivalent time in Stockholm Time (+01:00 or +02:00 when DST on).
+    It works only for the 2024, due to different DST condition year by year.
+    '''
+
+    # Destructure the received time
+    datetime_format = "%Y-%m-%dT%H:%M:%SZ"
+    scheduled_datetime = datetime.strptime(time, datetime_format)
+    
+    yyyy    = scheduled_datetime.year
+    mm      = scheduled_datetime.month
+    dd      = scheduled_datetime.day
+    hh      = scheduled_datetime.hour
+    minutes = scheduled_datetime.minute
+    ss      = scheduled_datetime.second
+
+    if (yyyy != 2024):
+        raise Exception("It works only with dates belonging to 2024")
+    
+    # According to the time-zone differences, the clock is moved forward or backward (In Sweden 2023: +01:00)
+    yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
+
+    # Set the clock an additional hour ahead when the DST was active (Sweden 2024, from 31st March - 01:00 (UCT00:00) to 27th October - 01:00 (UCT00:00))
+    if (mm == 3 and dd == 31 and hh >= 1) or (mm in {4,5,6,7,8,9}) or (mm == 10 and dd <= 26) or (mm == 10 and dd == 27 and hh <= 1):
+        yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
+
+    # Calculate now stockholm time and create a string with the required datetime_format
+    stockholm_time = datetime(yyyy, mm, dd, hh, minutes, ss).strftime(datetime_format)
+
+    return stockholm_time
+
+
 def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     '''
     Get the daily MESAN analysis of a specific day. It get the online GRIB file from smhiAPI OpenData
@@ -164,9 +347,10 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     # Always imposed limit for query
     if (month in {4, 6, 9, 11} and day in {31}) or (month in {2} and (year % 4 == 0) and day in {30, 31}) or (month in {2} and (year % 4 != 0) and day in {29, 30, 31}):
         raise Exception('This day does not exist')
-        
+
     new_row_date = get_date_label(year, month, day, 'hyphen')
 
+    # Iterate for each hour of the requested day
     for hour in range(starting_hour, ending_hour + 1):
         file_counter += 1
         # Empty the list representing the future df element and append the needed information of the df
@@ -189,6 +373,12 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
         file_name = 'ARN_' + new_row_date + '_' + hh
         save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
         complete_name = os.path.join(save_path, file_name)
+
+
+
+
+
+
 
 
 
