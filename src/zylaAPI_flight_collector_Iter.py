@@ -47,7 +47,7 @@ for month in range(starting_month, ending_month + 1):
             responseJson = response.json()
 
             file_name = "flight_" + date_label + ".json"
-            save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/zylaAPI_flights_raw/"
+            save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/zylaAPI_flights/"
             complete_name = os.path.join(save_path, file_name)
 
             with open(complete_name, "w") as outfile:

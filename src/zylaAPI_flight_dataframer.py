@@ -24,7 +24,7 @@ new_column_values = []
 row_to_remove = []
 
 for row in range(df.shape[0]):
-    if df.at[row, 'status'] in {'unknown', 'cancelled'}:
+    if df.at[row, 'status'] not in {'active'}:
         row_to_remove.append(row)
 
 

@@ -24,4 +24,3 @@ print(url)
 # Make the API request for Zyla API
 response = requests.get(url, headers=headers)
 responseJson = response.json()
-print(responseJson)
