@@ -31,9 +31,8 @@ for row in range(df.shape[0]):
     dd   = date_object.day
     hh   = df.at[row, 'time']
 
-    # Set when the DST goes from summer time to winter time, since one our computed is lost (In Sweden 2023: 29th Oct - 01:00 (UCT00:00))
+    # Set when the DST goes from summer time to winter time, since one hour computed is lost (In Sweden 2023: 29th Oct - 01:00 (UCT00:00))
     if (mm == 10 and dd == 29 and hh == 1):
-        print(row, mm, dd, hh)
         row_to_drop.append(row)
 
     else:
@@ -42,7 +41,6 @@ for row in range(df.shape[0]):
             yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
 
         # According to the time-zone differences, the clock is moved forward or backward (In Sweden 2023: +01:00)
-        print(row)
         yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
 
         # The old values are then replace by the just shifted date and time
