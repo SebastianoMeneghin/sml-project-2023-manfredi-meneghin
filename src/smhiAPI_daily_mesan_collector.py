@@ -278,44 +278,79 @@ def get_mesan_date_label(year, month, day, hour, mode):
   return mesan_label
 
 
-def swedaviaAPI_correct_UCT(time):
+def smhiAPI_get_grib_identifier(yyyymmdd, yyyymm, hour):
+    hh = get_padded_hour(hour)
+    identifier = yyyymm + '/MESAN_' + yyyymmdd + hh + '00+000H00M'
+    return identifier
+
+
+def smhiAPI_get_daily_grib_datestamps(year, month, day, dst):
     '''
-    Given a time in the format "%Y-%m-%dT%H:%M:%SZ" (format of SwedaviaAPI), return the
-    equivalent time in Stockholm Time (+01:00 or +02:00 when DST on).
+    Given a year, month, day and the DST value, return a dictionary containing pairs
+    of key-value for the full inserted day, with "key" equal to the wanted stockholm_time 
+    and value equal to the datestamps of the GRIB file corresponding to the wanted stockholm_time.
     It works only for the 2024, due to different DST condition year by year.
     '''
 
-    # Destructure the received time
-    datetime_format = "%Y-%m-%dT%H:%M:%SZ"
-    scheduled_datetime = datetime.strptime(time, datetime_format)
-    
-    yyyy    = scheduled_datetime.year
-    mm      = scheduled_datetime.month
-    dd      = scheduled_datetime.day
-    hh      = scheduled_datetime.hour
-    minutes = scheduled_datetime.minute
-    ss      = scheduled_datetime.second
+    hour_dict   = {}
+    hour_keys   = []
+    hour_values = []
+    date_stamps = []
+    hour_before = 0
 
-    if (yyyy != 2024):
-        raise Exception("It works only with dates belonging to 2024")
-    
-    # According to the time-zone differences, the clock is moved forward or backward (In Sweden 2023: +01:00)
-    yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
+    yyyybefore, mmbefore, ddbefore = one_day_backward(year, month, day)
+    yyyymmbefore                   = get_year_month_label(yyyybefore, mmbefore, 'empty')
+    yyyymmddbefore                 = get_date_label(yyyybefore, mmbefore, ddbefore, 'empty')
+    yyyymmcurrent                  = get_year_month_label(year, month, 'empty')
+    yyyymmddcurrent                = get_date_label(year, month, day, 'empty')
 
-    # Set the clock an additional hour ahead when the DST was active (Sweden 2024, from 31st March - 01:00 (UCT00:00) to 27th October - 01:00 (UCT00:00))
-    if (mm == 3 and dd == 31 and hh >= 1) or (mm in {4,5,6,7,8,9}) or (mm == 10 and dd <= 26) or (mm == 10 and dd == 27 and hh <= 1):
-        yyyy,mm,dd,hh = one_hour_forward(yyyy,mm,dd,hh)
+    # Add the hour key for midnight
+    hour_keys.append(0)
 
-    # Calculate now stockholm time and create a string with the required datetime_format
-    stockholm_time = datetime(yyyy, mm, dd, hh, minutes, ss).strftime(datetime_format)
+    if (month == 3 and day == 31):
+        hour_keys.append(2)
+        hour_values.extend((23,0,1,2,3))
+        hour_before = 2
+    elif (month == 10 and day == 27):
+        hour_keys.extend((1,2))
+        hour_values.extend((22,23,1,2,3))
+        hour_before = 2
+    elif (dst):
+        hour_keys.extend((1,2))
+        hour_values.extend((22,23,0,1,2,3))
+        hour_before = 2
+    else:
+        hour_keys.extend((1,2))
+        hour_values.extend((23,0,1,2,3))
+        hour_before = 1
 
-    return stockholm_time
+    hour_keys.extend(range(3,24))
+    hour_values.extend(range(4,22))
+
+    if ((not dst) or (month == 10 and day == 27)):
+        hour_values.append(22)
+
+
+    # Get the date_stamps for each hour_value
+    counter = 0
+    for hour_value in hour_values:
+        if (counter < hour_before):
+            date_stamps.append(smhiAPI_get_grib_identifier(yyyymmddbefore, yyyymmbefore, hour_value))
+        else:
+            date_stamps.append(smhiAPI_get_grib_identifier(yyyymmddcurrent, yyyymmcurrent, hour_value))
+
+        counter += 1
+
+    hour_dict = dict(zip(hour_keys, date_stamps))
+
+    return hour_dict
 
 
 def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     '''
     Get the daily MESAN analysis of a specific day. It get the online GRIB file from smhiAPI OpenData
     and give as result dataframe with all the uniformized and casted data, according to the rest of the project.
+    This works only in 2024, due to the difference of DST changing year by year.
     '''
     # Set the latitude and longitude limits
     target_latitude_down  = 59.575368
@@ -347,28 +382,17 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     # Always imposed limit for query
     if (month in {4, 6, 9, 11} and day in {31}) or (month in {2} and (year % 4 == 0) and day in {30, 31}) or (month in {2} and (year % 4 != 0) and day in {29, 30, 31}):
         raise Exception('This day does not exist')
+    # Requirements checking for this function
+    if (year != 2024):
+        raise Exception('This process works only in 2024')
+    
+    # Get pairs of (stockholm hour -> grib_datestamps)
+    datestamp_dict = smhiAPI_get_daily_grib_datestamps(year, month, day, dst)
 
-    new_row_date = get_date_label(year, month, day, 'hyphen')
-
-    # Iterate for each hour of the requested day
-    for hour in range(starting_hour, ending_hour + 1):
-        file_counter += 1
-        # Empty the list representing the future df element and append the needed information of the df
-        new_row_attr = []
-        new_row_time = hour
-        new_row_attr.append(new_row_date)
-        new_row_attr.append(new_row_time)
-
-        # Get some data with specific formatting to put in url and file name
-        yyyymm = get_year_month_label(year, month, 'empty')
-        yyyymmddhhhh = get_mesan_date_label(year, month, day, hour, 'empty')
-        hh = get_padded_hour(hour)
-
-        # Create the url depending on the SMHI Historical Data filesystem requirements
-        url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + yyyymm + '/MESAN_' + yyyymmddhhhh + '+000H00M'
-        response = requests.get(url)
-
-        print(url)
+    for datestamp in datestamp_dict.values():
+        hour_grib_url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + datestamp
+        hour_response = requests.get(hour_grib_url)
+        print(hour_grib_url)
 
         file_name = 'ARN_' + new_row_date + '_' + hh
         save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
