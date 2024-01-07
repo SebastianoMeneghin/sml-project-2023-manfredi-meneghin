@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 import math
-from utils import get_day_of_week, get_date_label, num_flight_within
+from utils import get_day_of_week, get_date_label, zylaAPI_num_flight_within
 from datetime import datetime
 
 
@@ -59,7 +59,7 @@ for row in range(df.shape[0]):
 
 
 # Add the column "flight_within_60min" and calculate these values for each flight
-flight_within, column_name = num_flight_within(60, df)
+flight_within, column_name = zylaAPI_num_flight_within(60, df)
 df[column_name] = flight_within
 df[new_column_names] = new_column_values
 

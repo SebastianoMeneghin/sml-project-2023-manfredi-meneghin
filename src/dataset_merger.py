@@ -4,7 +4,7 @@ import numpy as np
 import json
 import math
 import pandasql as sqldf
-from utils import get_day_of_week, get_date_label, num_flight_within
+from utils import get_day_of_week, get_date_label, zylaAPI_num_flight_within
 from datetime import datetime
 
 # Load the two historical datasets into dataframes
