@@ -7,7 +7,6 @@ import re
 import json
 import os
 import time
-from io import BytesIO
 from datetime import datetime
 
 
@@ -559,7 +558,7 @@ def smhiAPI_acquire_daily_mesan(mode):
     if (mode == 'yesterday'):
         yearbefore, monthbefore, daybefore = one_day_backward(year, month, day)
         datebefore                         = get_date_label(yearbefore, monthbefore, daybefore, 'hyphen')
-        
+
         print('Acquiring meteorological data about:' + datebefore)
 
         selected_date = datebefore
