@@ -21,9 +21,9 @@ def dataset_uploader(project, normalized_dataset_df):
     '''
     fs = project.get_feature_store()
     fg = fs.get_or_create_feature_group(
-        name="flight_weather_delay_model",
+        name="flight_weather_dataset",
         version=1,
-        primary_key=['flight_iata_number', 'dep_ap_iata_code', 'arr_ap_iata_code'], 
+        primary_key=['date', 'time', 'dep_ap_iata_code', 'arr_ap_iata_code', 'flight_iata_number'], 
         description="Daily updated flight-weather info dataset")
     fg.insert(normalized_dataset_df)
 
