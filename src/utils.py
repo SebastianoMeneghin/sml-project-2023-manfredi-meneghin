@@ -654,7 +654,7 @@ def dataset_normalizer(dataset_df):
     Given a dataset with the columns names extracted from the APIs data, return a dataset (dataframe)
     with the name of the columns according to the feature group on Hopsworks
     '''
-    dataset_df.rename(columns={'depApIataCode' : 'dep_ap_iata_code', 'depDelay' : 'dep_delay', 'depApTerminal': 'dep_terminal',
+    dataset_df.rename(columns={'depApIataCode' : 'dep_ap_iata_code', 'depDelay' : 'dep_delay', 'depApTerminal': 'dep_ap_terminal',
                                 'depApGate': 'dep_ap_gate', 'arrApIataCode' : 'arr_ap_iata_code', 'airlineIataCode':'airline_iata_code',
                                 'flightIataNumber':'flight_iata_number'}, inplace= True)
     

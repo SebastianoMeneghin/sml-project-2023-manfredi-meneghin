@@ -83,7 +83,7 @@ for name in box_columns:
 
 # Pairplot are printed to show data correlation
 numerical_elem = ['flight_within_60min', 'time', 'temperature', 'visibility', 'gusts_wind', 'wind_speed']
-categorical_elem = ['dep_terminal', 'month', 'day_of_week', 'pressure', 'humidity', 'wind_dir', 'total_cloud', 'low_cloud', 'medium_cloud', 'high_cloud', 'sort_prep']
+categorical_elem = ['dep_ap_terminal', 'month', 'day_of_week', 'pressure', 'humidity', 'wind_dir', 'total_cloud', 'low_cloud', 'medium_cloud', 'high_cloud', 'sort_prep']
 
 for elem in numerical_elem:
   small_df = df[[elem, 'dep_delay']]
@@ -103,7 +103,7 @@ for elem in categorical_elem:
 
 
 # Lastly, the correlation matrix is created
-numeric_df = df['dep_terminal', 'flight_within_60min', 'time', 'month',
+numeric_df = df['dep_ap_terminal', 'flight_within_60min', 'time', 'month',
        'day_of_week', 'temperature', 'visibility', 'pressure', 'humidity',
        'gusts_wind', 'wind_speed', 'wind_dir', 'total_cloud', 'low_cloud',
        'medium_cloud', 'high_cloud', 'sort_prep', 'dep_delay']
