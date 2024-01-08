@@ -10,12 +10,20 @@ import pandas as pd
 import numpy as np
 import xgboost
 import hopsworks
+from hsml.schema import Schema
+from hsml.model_schema import ModelSchema
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-# Select whether or not to select the best model and/or to evaluate them.
+# Set true to perform model selection and/or evaluation
 model_selection  = False
 model_evaluation = False
+
+# Set true to save the model into hopsworks model registry
+model_upload     = True
+
+# Set true to save the model locally
+model_localsave  = False
 
 
 # Load dataset
@@ -85,7 +93,7 @@ ytest  = test['dep_delay']
 model.fit(Xtrain, ytrain)
 y_pred = model.predict(Xtest)
 model_metrics = [mean_absolute_error(ytest, y_pred), mean_squared_error(ytest, y_pred)]
-print(f'Metrics: {model_metrics}')
+print(f'\nTrained model metrics: {model_metrics}\n')
 
 
 if (model_selection):
@@ -122,7 +130,33 @@ if (model_selection):
     print(gbc.best_params_)
 
 
-# Save the model
+# Save the model on hopsworks
+if (model_upload): 
+    mr = project.get_model_registry()
+    model_dir="flight_weather_delay_model"
+
+    # If set true, save the model locally
+    if (model_localsave):
+        if os.path.isdir(model_dir) == False:
+            os.mkdir(model_dir)
+        # Save the model
+        joblib.dump(model, model_dir + "/flight_weather_delay_model.pkl")
+
+    # Specify the schema of the models' input/output using the features (Xtrain) and labels (ytrain)
+    input_schema = Schema(Xtrain)
+    output_schema = Schema(ytrain)
+    model_schema = ModelSchema(input_schema, output_schema)
+
+    flight_weather_delay_model = mr.python.create_model(
+        name="flight_weather_delay_model", 
+        metrics={"mean_absolute_error" : model_metrics[0]},
+        model_schema=model_schema,
+        description="XGBoost Regression model for flight departure delay, trained on flights info and weather info"
+    )
+
+    # Upload the model to the model registry
+    flight_weather_delay_model.save(model_dir)
+
 
 
   
