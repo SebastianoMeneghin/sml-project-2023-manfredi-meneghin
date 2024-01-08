@@ -15,10 +15,10 @@ def dataset_normalizer(dataset_df):
     return dataset_df
 
 
-def daily_weather_flight_file_merger(w_filepath, f_filepath, save_path, save_name):
+def daily_flight_weather_file_merger(f_filepath, w_filepath, save_path, save_name):
 
-    weather_df = pd.read_csv(w_filepath)
     flight_df  = pd.read_csv(f_filepath)
+    weather_df = pd.read_csv(w_filepath)
 
     # Create a query to join the two datasets, according to date and time
     query = """
@@ -42,7 +42,7 @@ def daily_weather_flight_file_merger(w_filepath, f_filepath, save_path, save_nam
     print('Dataset merged created and save in:' + os.path.join(save_path, save_name))
 
 
-def daily_weather_flight_dataframe_merger(weather_df, flight_df):
+def daily_flight_weather_dataframe_merger(flight_df, weather_df):
 
     # Create a query to join the two datasets, according to date and time
     query = """
@@ -67,4 +67,4 @@ w_path = ''
 f_path = ''
 s_path = ''
 s_name = ''
-daily_weather_flight_file_merger(w_path, f_path, s_path, s_name)
+daily_flight_weather_file_merger(w_path, f_path, s_path, s_name)
