@@ -15,15 +15,51 @@ from hsml.model_schema import ModelSchema
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-# Set true to perform model selection and/or evaluation
-model_selection  = False
-model_evaluation = False
 
-# Set true to save the model into hopsworks model registry
-model_upload     = True
+def set_model_last_version_number(project, last_version_number):
+    '''
+    Given the Hopsworks Project "project", set the latest version number of the dataset to "version_number"
+    '''
+    # Get dataset API to save the version number on Hopsworks
+    dataset_api = project.get_dataset_api()
 
-# Set true to save the model locally
-model_localsave  = False
+    # Create the skeleton of a .json file big enough to be saved by Hopsworks
+    last_version_number = {'last_version_number': last_version_number}
+    version_number_list   = [last_version_number] * 1000
+    last_version_number_json = json.dumps(version_number_list)
+
+    # Create a file .json, save it in local and then save it on hopsworks. When finished, delete the json file locally
+    with open("last_version_number.json", "w") as outfile:
+        outfile.write(last_version_number_json)
+
+        last_version_number_path = os.path.abspath('last_version_number.json')
+        dataset_api.upload(last_version_number_path, "Resources/dataset_version", overwrite=True)
+    os.remove("last_version_number.json")
+
+    
+def get_model_last_version_number(project):
+    '''
+    Given the Hopsworks Project "project", get the last_version_number of the dataset
+    '''
+    # Get dataset API to download the last_version_number from Hopsworks
+    dataset_api = project.get_dataset_api()
+    dataset_api.download("Resources/dataset_version/last_version_number.json")
+
+    # Open JSON file, return it as a dictionary
+    json_file = open('last_version_number.json')
+    json_data = json.load(json_file)
+
+    last_version_number = json_data[0]['last_version_number']
+    os.remove('last_version_number.json')
+
+    return last_version_number
+
+
+# Set true to:
+model_selection  = False  #perform model selection
+model_evaluation = False  #perform model evaluation
+model_upload     = True   #save the model into hopsworks model registry
+model_localsave  = False  #save the model locally
 
 
 # Load dataset
@@ -133,14 +169,14 @@ if (model_selection):
 # Save the model on hopsworks
 if (model_upload): 
     mr = project.get_model_registry()
-    model_dir="flight_weather_delay_model"
+    model_dir="flight_weather_delay"
 
     # If set true, save the model locally
     if (model_localsave):
         if os.path.isdir(model_dir) == False:
             os.mkdir(model_dir)
         # Save the model
-        joblib.dump(model, model_dir + "/flight_weather_delay_model.pkl")
+        joblib.dump(model, model_dir + "/flight_weather_delay.pkl")
 
     # Specify the schema of the models' input/output using the features (Xtrain) and labels (ytrain)
     input_schema = Schema(Xtrain)
@@ -148,14 +184,16 @@ if (model_upload):
     model_schema = ModelSchema(input_schema, output_schema)
 
     flight_weather_delay_model = mr.python.create_model(
-        name="flight_weather_delay_model", 
+        name="flight_weather_delay", 
         metrics={"mean_absolute_error" : model_metrics[0]},
         model_schema=model_schema,
+        version = int(get_model_last_version_number(project)) + 1,
         description="XGBoost Regression model for flight departure delay, trained on flights info and weather info"
     )
 
     # Upload the model to the model registry
     flight_weather_delay_model.save(model_dir)
+    set_model_last_version_number(project, get_model_last_version_number + 1)
 
 
 
