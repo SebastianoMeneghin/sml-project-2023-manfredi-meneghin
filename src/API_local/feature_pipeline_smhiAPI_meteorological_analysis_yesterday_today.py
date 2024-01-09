@@ -731,5 +731,7 @@ def smhiAPI_acquire_daily_mesan(mode):
 
 
 
+
+
 smhiAPI_acquire_daily_mesan('today')
 smhiAPI_acquire_daily_mesan('yesterday')
