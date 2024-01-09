@@ -263,7 +263,7 @@ def swedaviaAPI_daily_collector(mode):
 
     # Create the request_url, then get the subscription key from Swedavia API and set them in the header
     swedavia_url     = 'https://api.swedavia.se/flightinfo/v2/ARN/departures/' + date_label
-    subscription_key = 'a9042dc249f34e02b9d7512a1d85aa70'
+    subscription_key = os.environ['SWEDAVIA_API_KEY']
     headers = {
         "Ocp-Apim-Subscription-Key": subscription_key,
         "Accept": "application/json",
