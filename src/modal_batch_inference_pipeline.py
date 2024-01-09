@@ -5,7 +5,7 @@ stub = modal.Stub("flight_delays_batch_inference_pipeline_daily")
 image = modal.Image.debian_slim().pip_install(["hopsworks", "joblib", "seaborn","scikit-learn==1.1.1", "numpy",
                                                "pandas", "pandasql", "xgboost", "cfgrib", "eccodes", "pygrib"])
 
-@stub.function(cpu=1.0, image=image, schedule=modal.Period(days=1), secret=modal.Secret.from_name("hopsworks_sml_project"))
+@stub.function(cpu=1.0, image=image, schedule=modal.Cron('15 0 * * *'), secret=modal.Secret.from_name("hopsworks_sml_project"))
 def f():
     g()
 
@@ -328,7 +328,7 @@ def swedaviaAPI_daily_collector(mode):
 
     # Create the request_url, then get the subscription key from Swedavia API and set them in the header
     swedavia_url     = 'https://api.swedavia.se/flightinfo/v2/ARN/departures/' + date_label
-    subscription_key = 'a9042dc249f34e02b9d7512a1d85aa70'
+    subscription_key =  os.environ['SWEDAVIA_API_KEY']
     headers = {
         "Ocp-Apim-Subscription-Key": subscription_key,
         "Accept": "application/json",
@@ -527,8 +527,10 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
     df.drop(columns={'index'}, inplace = True)
 
     # Create new columns for future df's data
-    new_column_names  = ['date','time', 'month', 'trip_time', 'day_of_week']
+    new_column_names  = ['time', 'month', 'trip_time', 'day_of_week']
     new_column_values = []
+    new_date_names    = 'date'
+    new_date_values   = []
     row_to_remove     = []
     status_set        = {}
 
@@ -576,7 +578,8 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
             day_of_the_week = get_day_of_week(dep_yyyy, dep_mm, dep_dd)
             # Save now: date_label, hour, month, trip_time, day_of_the_week
 
-            new_column_values.append([dep_date_label, dep_hh, dep_mm, trip_time, day_of_the_week])
+            new_column_values.append([dep_hh, dep_mm, trip_time, day_of_the_week])
+            new_date_values.append(dep_date_label)
 
             # In another lists, save hour and minute of each flight
             flight_hh.append(dep_hh)
@@ -587,6 +590,7 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
         flight_within, column_name = swedaviaAPI_num_flight_within(60, df)
         df[column_name] = flight_within
         df[new_column_names] = new_column_values
+        df[new_date_names] = new_date_values
 
         # Create another dataframe containing hh:MM for each flight
         hhMM_df = pd.DataFrame()
@@ -742,10 +746,6 @@ def smhiAPI_acquire_realtime_forecast(mode):
         hour = 0
         year, month, day = one_day_forward(year, month, day)
 
-    # Save the selected date to further save the created file
-    selected_date = get_date_label(year, month, day, 'hyphen')
-
-
     # Set the skeleton of the dataframe
     forecast_df_columns = ["t", "vis", "msl", "r", "gust", "ws", "wd", "tcc_mean", "lcc_mean", "mcc_mean", "hcc_mean", "pcat"]
     forecast_df         = pd.DataFrame(columns=forecast_df_columns)
@@ -898,26 +898,23 @@ def daily_flight_weather_dataframe_merger(flight_df, weather_df):
     import math
     import pandas as pd
     import numpy as np
-    import pandasql as sqldf
     from datetime import datetime
 
-    # Create a query to join the two datasets, according to date and time
-    query = """
-            select
-                *
-            from
-                flight_df f
-            inner join
-                weather_df w
-                    on f.date = w.date and f.time = w.time
-            """
 
-    # Join the two datasets according and remove duplicated columns
-    merged_df = sqldf.sqldf(query)
+    flight_df.reset_index(inplace=True)
+    flight_df.rename(columns={'index':'pointer'}, inplace = True)
+
+    # Merge the two DataFrames on 'date' and 'time'
+    merged_df = pd.merge(flight_df, weather_df, on=['date', 'time'], how='inner')
+    
+    removed_rows = flight_df.loc[~flight_df['pointer'].isin(merged_df['pointer']), 'pointer']
+    removed_rows_list = removed_rows.tolist()
+    print(removed_rows_list)
+
+    merged_df.drop(columns={'pointer'}, inplace = True)
     merged_df = merged_df.loc[:,~merged_df.columns.duplicated()].copy()
 
-    print('Dataset merged created!')
-    return merged_df
+    return merged_df, removed_rows_list
 
 
 def dataset_normalizer(dataset_df):
@@ -950,15 +947,6 @@ def dataset_normalizer(dataset_df):
     for col in convert_column:
         df = df.astype({col: 'int64'})
 
-    # Remove outliners in delay (dep_delay > 120)
-    row_list = []
-    for row in range(df.shape[0]):
-        if (df.at[row, 'dep_delay'] > 120):
-            row_list.append(row)
-    df.drop(row_list, inplace = True)
-    df.reset_index(inplace = True)
-    df.drop(columns={'index'}, inplace = True)
-
     # Make wind_dir a categorical feature with numbers and not string labels
     dir_dict = {'SW':0,'S':1,'SE':2,'E':3,'NE':4,'N':5,'NW':6,'W':7}
     direction_list = []
@@ -973,34 +961,6 @@ def dataset_normalizer(dataset_df):
     iata_df = dataset_df[['arr_ap_iata_code', 'flight_iata_number']]
 
     return df, iata_df
-
-
-def get_model_last_version_number(project):
-    '''
-    Given the Hopsworks Project "project", get the last_version_number of the dataset
-    '''
-    import os
-    import re
-    import json
-    import requests
-    import hopsworks
-    import joblib
-    import math
-    import pandas as pd
-    import numpy as np
-    from datetime import datetime
-
-    # Get dataset API to download the last_version_number from Hopsworks
-    dataset_api = project.get_dataset_api()
-    dataset_api.download("Resources/dataset_version/last_version_number.json")
-
-    # Open JSON file, return it as a dictionary
-    json_file = open('last_version_number.json')
-    json_data = json.load(json_file)
-
-    last_version_number = json_data[0]['last_version_number']
-
-    return last_version_number
 
 
 def get_hour_minute_timetable_label(hour, minute):
@@ -1089,6 +1049,20 @@ def get_timetable_labels(timetable_df):
     return timetable_df
 
 
+def collect_timetable_attributes(hhMM_df, iata_df, removed_rows):
+    
+    hhMM_df.drop(removed_rows, inplace = True)
+    hhMM_df.reset_index(inplace = True)
+    hhMM_df.drop(columns={'index'}, inplace = True)
+
+    # Collect timetable information to visualize
+    timetable_df                  = hhMM_df
+    timetable_df['airport']       = iata_df['arr_ap_iata_code']
+    timetable_df['flight_number'] = iata_df['flight_iata_number']
+
+    return timetable_df
+
+
 def collect_today_flight_weather_info():
     '''
     Collect today's flight and weather info
@@ -1116,15 +1090,13 @@ def collect_today_flight_weather_info():
     today_wheather_df = smhiAPI_acquire_realtime_forecast('today')
 
     # Merge the two dataframes
-    today_fw_df = daily_flight_weather_dataframe_merger(today_flight_df, today_wheather_df)
+    today_fw_df, removed_rows = daily_flight_weather_dataframe_merger(today_flight_df, today_wheather_df)
 
     # Normalize the unified dataframe
     today_fw_normalized_df, today_iata_df = dataset_normalizer(today_fw_df)
 
     # Collect timetable information to visualize
-    today_timetable_attr_df                  = today_hhMM_df
-    today_timetable_attr_df['airport']       = today_iata_df['arr_ap_iata_code']
-    today_timetable_attr_df['flight_number'] = today_iata_df['flight_iata_number']
+    today_timetable_attr_df = collect_timetable_attributes(today_hhMM_df, today_iata_df, removed_rows)
                             
     return today_fw_normalized_df, today_timetable_attr_df
 
@@ -1156,15 +1128,13 @@ def collect_tomorrow_flight_weather_info():
     tomorrow_wheather_df = smhiAPI_acquire_realtime_forecast('tomorrow')
 
     # Merge the two dataframes
-    tomorrow_fw_df = daily_flight_weather_dataframe_merger(tomorrow_flight_df, tomorrow_wheather_df)
+    tomorrow_fw_df, removed_rows = daily_flight_weather_dataframe_merger(tomorrow_flight_df, tomorrow_wheather_df)
 
     # Normalize the unified dataframe
     tomorrow_fw_normalized_df, tomorrow_iata_df = dataset_normalizer(tomorrow_fw_df)
 
     # Collect timetable information to visualize
-    tomorrow_timetable_attr_df                  = tomorrow_hhMM_df
-    tomorrow_timetable_attr_df['airport']       = tomorrow_iata_df['arr_ap_iata_code']
-    tomorrow_timetable_attr_df['flight_number'] = tomorrow_iata_df['flight_iata_number']
+    tomorrow_timetable_attr_df = collect_timetable_attributes(tomorrow_hhMM_df, tomorrow_iata_df, removed_rows)
                             
     return tomorrow_fw_normalized_df, tomorrow_timetable_attr_df
 
@@ -1187,7 +1157,7 @@ def get_timetable_predictions(project):
 
     # Download the pre-trained model and load it
     mr        = project.get_model_registry()
-    model     = mr.get_model("flight_weather_delay_model", version=get_model_last_version_number)
+    model     = mr.get_model("flight_weather_delay_model", version=1)
     model_dir = model.download()
     model     = joblib.load(model_dir + "/flight_weather_delay_model.pkl")
 
@@ -1209,6 +1179,21 @@ def get_timetable_predictions(project):
     return today_timetable_attr_df, tomorrow_timetable_attr_df
 
 
+def get_dataframe_padded(dataframe, padding_column_number):
+  '''
+  Given a dataframe and a padding_measure, return the same dataframe a number of
+  new padding column containing only the value "padding_column_number"
+  '''
+
+  padding_column = [padding_column_number] * dataframe.shape[0]
+
+  for number in range(padding_column_number):
+    numbered_name = 'padding' + str(number)
+    dataframe[numbered_name] = padding_column
+
+  return dataframe
+
+
 def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
     
     import os
@@ -1225,8 +1210,11 @@ def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
     # Get access to hopsworks memory
     dataset_api = project.get_dataset_api()
 
+    today_df_padded    = get_dataframe_padded(today_df,    50)
+    tomorrow_df_padded = get_dataframe_padded(tomorrow_df, 50)
+
     with open("today_timetable_prediction.csv", "w") as today_outfile:
-        today_df.to_csv(today_outfile, index = False)
+        today_df_padded.to_csv(today_outfile, index = False)
 
         today_pred_path = os.path.abspath("today_timetable_prediction.csv")
         dataset_api.upload(today_pred_path, "Resources/today_timetable_prediction", overwrite=True)
@@ -1234,7 +1222,7 @@ def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
     os.remove("today_timetable_prediction.csv")
 
     with open("tomorrow_timetable_prediction.csv", "w") as tomorrow_outfile:
-        tomorrow_df.to_csv(tomorrow_outfile, index = False)
+        tomorrow_df_padded.to_csv(tomorrow_outfile, index = False)
 
         tomorrow_pred_path = os.path.abspath("tomorrow_timetable_prediction.csv")
         dataset_api.upload(tomorrow_pred_path, "Resources/tomorrow_timetable_prediction", overwrite=True)
