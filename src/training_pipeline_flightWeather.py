@@ -50,6 +50,42 @@ def get_model_last_version_number(project):
     return last_version_number
 
 
+def uniform_dataframe_for_training(df):
+    '''
+    Given a dataset with the columns names extracted from the APIs data, return a dataset (dataframe)
+    uniformed in order to be possible training a model on that
+    '''
+    df.drop(columns={'trip_time', 'dep_ap_gate', 'airline_iata_code', 'flight_iata_number', 
+                     'arr_ap_iata_code', 'status','dep_ap_iata_code', 'date', 'high_cloud', 
+                     'medium_cloud', 'low_cloud', 'gusts_wind'}, inplace=True)
+
+    # Some data should be casted to int64
+    convert_column = ['pressure','total_cloud', 'sort_prep','humidity']
+    for col in convert_column:
+        df = df.astype({col: 'int64'})
+
+    # Remove outliners in delay (dep_delay > 120)
+    row_list = []
+    for row in range(df.shape[0]):
+        if (df.at[row, 'dep_delay'] > 120):
+            row_list.append(row)
+    df.drop(row_list, inplace = True)
+    df.reset_index(inplace = True)
+    df.drop(columns={'index'}, inplace = True)
+
+    # Make wind_dir a categorical feature with numbers and not string labels
+    dir_dict = {'SW':0,'S':1,'SE':2,'E':3,'NE':4,'N':5,'NW':6,'W':7}
+    direction_list = []
+    for row in range(df.shape[0]):
+        direction = df.at[row, 'wind_dir']
+        number = dir_dict.get(direction)
+        direction_list.append(number)
+    df.drop(columns={'wind_dir'}, inplace = True)
+    df['wind_dir'] = direction_list
+
+    return df
+
+
 
 
 ##### DATA PRE-PROCESSING #####
@@ -63,49 +99,8 @@ fg = fs.get_feature_group(
     )
 df = fg.read(dataframe_type = 'pandas')
 
-
-# Due to a not optimal flight API, some data as "DepApGate", "TimeTrip" cannot be calculated in new data
-# Furthermore, the following columns are dropped:
-df.drop(columns={'trip_time', 'dep_ap_gate'}, inplace = True)
-
-# Due to a disproportion between categories and flights features (too mant for too few), the future columns are dropped:
-# When there will be more data, it will be interesting to add them to the model
-df.drop(columns={'airline_iata_code', 'flight_iata_number', 'arr_ap_iata_code'}, inplace = True)
-
-# Some data are used as a key, but are not made to be variables of our model, furthermore are dropped:
-# If there will be data coming from different airports, it will be interesting to add 'depApIataCode' as variable.
-df.drop(columns={'status','dep_ap_iata_code', 'date'}, inplace = True)
-
-# Some data should be casted to int64
-convert_column = ['pressure','total_cloud', 'high_cloud', 'medium_cloud', 'low_cloud', 'sort_prep','humidity']
-for col in convert_column:
-    df = df.astype({col: 'int64'})
-
-# Remove outliners in delay (dep_delay > 120)
-row_list = []
-for row in range(df.shape[0]):
-  if (df.at[row, 'dep_delay'] > 120):
-    row_list.append(row)
-df.drop(row_list, inplace = True)
-df.reset_index(inplace = True)
-df.drop(columns={'index'}, inplace = True)
-
-# Since total_cloud can summarize the others:
-df.drop(columns={'high_cloud', 'medium_cloud', 'low_cloud'}, inplace = True)
-
-# Since wind_speed can summarize gusts_wind:
-df.drop(columns={'gusts_wind'}, inplace = True)
-
-# Make wind_dir a categorical feature with numbers and not string labels
-dir_dict = {'SW':0,'S':1,'SE':2,'E':3,'NE':4,'N':5,'NW':6,'W':7}
-direction_list = []
-for row in range(df.shape[0]):
-    direction = df.at[row, 'wind_dir']
-    number = dir_dict.get(direction)
-    direction_list.append(number)
-df.drop(columns={'wind_dir'}, inplace = True)
-df['wind_dir'] = direction_list
-    
+# Preprocess the dataset's dataframe
+df = uniform_dataframe_for_training(df)
 
 
 ##### MODEL TRAINING #####
