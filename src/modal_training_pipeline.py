@@ -1,53 +1,13 @@
-import json
 import os
-import joblib
-import pandas as pd
-import numpy as np
-import xgboost
-import hopsworks
-from hsml.schema import Schema
-from hsml.model_schema import ModelSchema
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+import modal
 
+stub = modal.Stub("flight_delays_training_pipeline_daily")
+image = modal.Image.debian_slim().pip_install(["hopsworks", "joblib", "seaborn","scikit-learn==1.1.1", "numpy"
+                                               "pandas", "pandasql", "xgboost", "cfgrib", "eccodes", "pygrib"])
 
-def set_model_last_version_number(project, last_version_number):
-    '''
-    Given the Hopsworks Project "project", set the latest version number of the dataset to "version_number"
-    '''
-    # Get dataset API to save the version number on Hopsworks
-    dataset_api = project.get_dataset_api()
-
-    # Create the skeleton of a .json file big enough to be saved by Hopsworks
-    last_version_number = {'last_version_number': last_version_number}
-    version_number_list   = [last_version_number] * 1000
-    last_version_number_json = json.dumps(version_number_list)
-
-    # Create a file .json, save it in local and then save it on hopsworks. When finished, delete the json file locally
-    with open("last_version_number.json", "w") as outfile:
-        outfile.write(last_version_number_json)
-
-        last_version_number_path = os.path.abspath('last_version_number.json')
-        dataset_api.upload(last_version_number_path, "Resources/dataset_version", overwrite=True)
-    os.remove("last_version_number.json")
-
-    
-def get_model_last_version_number(project):
-    '''
-    Given the Hopsworks Project "project", get the last_version_number of the dataset
-    '''
-    # Get dataset API to download the last_version_number from Hopsworks
-    dataset_api = project.get_dataset_api()
-    dataset_api.download("Resources/dataset_version/last_version_number.json")
-
-    # Open JSON file, return it as a dictionary
-    json_file = open('last_version_number.json')
-    json_data = json.load(json_file)
-
-    last_version_number = json_data[0]['last_version_number']
-    os.remove('last_version_number.json')
-
-    return last_version_number
+@stub.function(cpu=1.0, image=image, schedule=modal.Period(days=1), secret=modal.Secret.from_name("hopsworks_iris_api"))
+def f():
+    g()
 
 
 def uniform_dataframe_for_training(df):
@@ -55,6 +15,9 @@ def uniform_dataframe_for_training(df):
     Given a dataset with the columns names extracted from the APIs data, return a dataset (dataframe)
     uniformed in order to be possible training a model on that
     '''
+    import pandas as pd
+    import numpy as np
+
     df.drop(columns={'trip_time', 'dep_ap_gate', 'airline_iata_code', 'flight_iata_number', 
                      'arr_ap_iata_code', 'status','dep_ap_iata_code', 'date', 'high_cloud', 
                      'medium_cloud', 'low_cloud', 'gusts_wind'}, inplace=True)
@@ -86,69 +49,121 @@ def uniform_dataframe_for_training(df):
     return df
 
 
+def create_last_model_performance_dataframe_row(size, model_metrics):
+    
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime
+
+    today_current_datetime   = datetime.now()
+    today_formatted_datetime = today_current_datetime.strftime("%Y-%m-%d_%H:%M:%S")
+    mae = model_metrics.get('mae')
+    mse = model_metrics.get('mse')
+
+    columns = ['timestamp','dateset_size','mae','mse']
+    row_df = pd.DataFrame(columns=columns)
+    row_df.loc[0] = [today_formatted_datetime, size, mae, mse]
+
+    return row_df
 
 
-##### DATA PRE-PROCESSING #####
-hopsworks_api_key = os.environ['HOPSWORKS_API_KEY']
-project = hopsworks.login(api_key_value = hopsworks_api_key)
-fs = project.get_feature_store()
+def training_pipeline_feature_collect(feature_store):
+    import json
+    import os
+    import joblib
+    import pandas as pd
+    import numpy as np
+    import xgboost
+    import hopsworks
+    from datetime import datetime
 
-fg = fs.get_feature_group(
-        name="flight_weather_dataset",
-        version=1,
-    )
-df = fg.read(dataframe_type = 'pandas')
+    # Read data into dataframe and preprocess the dataset 
+    feature_group = feature_store.get_feature_group(name = 'flight_weather_dataset', version=1)
+    df            = feature_group.read(dataframe_type='pandas')
+    df            = uniform_dataframe_for_training(df)
 
-# Preprocess the dataset's dataframe
-df = uniform_dataframe_for_training(df)
-
-
-##### MODEL TRAINING #####
-model = xgboost.XGBRegressor(eta= 0.1, max_depth= 7, n_estimators= 38, subsample= 0.8)
-train, test = train_test_split(df, test_size=0.2)
-Xtrain = train.drop(columns={'dep_delay'})
-ytrain = train['dep_delay']
-Xtest  = test.drop(columns={'dep_delay'})
-ytest  = test['dep_delay']
-
-# Train and test the model
-model.fit(Xtrain, ytrain)
-y_pred = model.predict(Xtest)
-model_metrics = [mean_absolute_error(ytest, y_pred), mean_squared_error(ytest, y_pred)]
-print(f'\nTrained model metrics: {model_metrics}\n')
+    # Return processed data as dataframe
+    return df
 
 
-
-##### MODEL SAVING #####
-mr = project.get_model_registry()
-model_dir="flight_weather_delay_dir"
-
-if os.path.isdir(model_dir) == False:
-    os.mkdir(model_dir)
-# Save the model
-joblib.dump(model, model_dir + "/flight_weather_delay_model.pkl")
-
-
-# Specify the schema of the models' input/output using the features (Xtrain) and labels (ytrain)
-input_schema = Schema(Xtrain)
-output_schema = Schema(ytrain)
-model_schema = ModelSchema(input_schema, output_schema)
-
-# Since the model cannot be overwritten, use the get_model/set_model workaround to create a new version of the model
-# and set is as the most updated
-flight_weather_delay_model = mr.python.create_model(
-    name="flight_weather_delay_model", 
-    metrics={"mean_absolute_error" : model_metrics[0]},
-    model_schema=model_schema,
-    version = int(get_model_last_version_number(project)) + 1,
-    description="XGBoost Regression model for flight departure delays, trained on flight info and weather info"
-)
+def training_pipeline_model_training_and_saving(project, df):
+    import json
+    import os
+    import joblib
+    import pandas as pd
+    import numpy as np
+    import xgboost
+    import hopsworks
+    from datetime import datetime
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
-# Upload the model to the model registry
-flight_weather_delay_model.save(model_dir)
-set_model_last_version_number(project, get_model_last_version_number + 1)
+    ##### MODEL TRAINING #####
+    model = xgboost.XGBRegressor(eta= 0.1, max_depth= 7, n_estimators= 38, subsample= 0.8)
+    train, test = train_test_split(df, test_size=0.2)
+    Xtrain = train.drop(columns={'dep_delay'})
+    ytrain = train['dep_delay']
+    Xtest  = test.drop(columns={'dep_delay'})
+    ytest  = test['dep_delay']
+
+    # Train and test the model
+    model.fit(Xtrain, ytrain)
+    y_pred = model.predict(Xtest)
+    model_metrics = {'mae' :mean_absolute_error(ytest, y_pred), 'mse': mean_squared_error(ytest, y_pred)}
 
 
+    ##### MODEL SAVING #####
+    model_dir  = "model_dir"
+    file_name  = 'flight_weather_delay_model.pkl'
 
-  
+    if os.path.isdir(model_dir) == False:
+        os.mkdir(model_dir)
+    # Save the model
+    joblib.dump(model, os.path.join(model_dir, file_name))
+
+    # Overwrite the model
+    dataset_api    = project.get_dataset_api()
+    local_path     = os.path.join(model_dir, file_name)
+    hopsworks_path = '/Projects/SMLFinalProject3/Models/flight_weather_delay_model/1/'
+    dataset_api.upload(local_path, hopsworks_path, overwrite=True)
+
+    return model_metrics
+
+
+def training_pipeline_save_model_performances(feature_store, dataset_size, model_metrics):
+    import json
+    import os
+    import pandas as pd
+    import hopsworks
+    from datetime import datetime
+    from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+    # Save the new model performances in the dedicated feature store
+    performance_fg     = feature_store.get_feature_group(name = 'model_performance', version = 1)
+    performance_df_row = create_last_model_performance_dataframe_row(dataset_size, model_metrics)
+    performance_fg.insert(performance_df_row)
+
+
+def g():
+    import json
+    import os
+    import joblib
+    import pandas as pd
+    import numpy as np
+    import xgboost
+    import hopsworks
+    from datetime import datetime
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+    # Connect to hopsworks and get data
+    hopsworks_api_key = os.environ['HOPSWORKS_API_KEY']
+    project           = hopsworks.login(api_key_value = hopsworks_api_key)
+    feature_store     = project.get_feature_store()
+
+    df            = training_pipeline_feature_collect(feature_store)
+    model_metrics = training_pipeline_model_training_and_saving(project, df)
+
+    # Save the new model performances in the dedicated feature store
+    training_pipeline_save_model_performances(feature_store, df.shape[0], model_metrics)  
