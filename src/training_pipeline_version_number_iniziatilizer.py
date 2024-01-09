@@ -52,7 +52,7 @@ def get_model_last_version(project):
     last_version_number = get_model_last_version_number(project)
 
     mr    = project.get_model_registry()
-    model = mr.get_model('flight_weather_delay', version = last_version_number)
+    model = mr.get_model('flight_weather_delay_model', version = last_version_number)
 
     return model
 
