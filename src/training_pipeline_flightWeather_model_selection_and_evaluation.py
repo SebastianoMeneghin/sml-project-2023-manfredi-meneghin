@@ -7,31 +7,10 @@ import xgboost
 import hopsworks
 from hsml.schema import Schema
 from hsml.model_schema import ModelSchema
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
-def set_model_last_version_number(project, last_version_number):
-    '''
-    Given the Hopsworks Project "project", set the latest version number of the dataset to "version_number"
-    '''
-    # Get dataset API to save the version number on Hopsworks
-    dataset_api = project.get_dataset_api()
-
-    # Create the skeleton of a .json file big enough to be saved by Hopsworks
-    last_version_number = {'last_version_number': last_version_number}
-    version_number_list   = [last_version_number] * 1000
-    last_version_number_json = json.dumps(version_number_list)
-
-    # Create a file .json, save it in local and then save it on hopsworks. When finished, delete the json file locally
-    with open("last_version_number.json", "w") as outfile:
-        outfile.write(last_version_number_json)
-
-        last_version_number_path = os.path.abspath('last_version_number.json')
-        dataset_api.upload(last_version_number_path, "Resources/dataset_version", overwrite=True)
-    os.remove("last_version_number.json")
-
-    
 def get_model_last_version_number(project):
     '''
     Given the Hopsworks Project "project", get the last_version_number of the dataset
@@ -50,6 +29,11 @@ def get_model_last_version_number(project):
     return last_version_number
 
 
+
+##### PARAMETERS SETTING #####
+# Set true if you want:
+MODEL_SELECTION  = True  #perform model selection
+MODEL_EVALUATION = True  #perform model evaluation
 
 
 ##### DATA PRE-PROCESSING #####
@@ -108,51 +92,46 @@ df['wind_dir'] = direction_list
     
 
 
-##### MODEL TRAINING #####
-model = xgboost.XGBRegressor(eta= 0.1, max_depth= 7, n_estimators= 38, subsample= 0.8)
+##### MODEL EVALUATION AND SELECTION #####
 train, test = train_test_split(df, test_size=0.2)
 Xtrain = train.drop(columns={'dep_delay'})
 ytrain = train['dep_delay']
 Xtest  = test.drop(columns={'dep_delay'})
 ytest  = test['dep_delay']
 
-# Train and test the model
-model.fit(Xtrain, ytrain)
-y_pred = model.predict(Xtest)
-model_metrics = [mean_absolute_error(ytest, y_pred), mean_squared_error(ytest, y_pred)]
-print(f'\nTrained model metrics: {model_metrics}\n')
 
+if MODEL_SELECTION:
 
+    clf = xgboost.XGBRegressor()
+    gbc = GridSearchCV(clf, param_grid = [])
 
-##### MODEL SAVING #####
-mr = project.get_model_registry()
-model_dir="flight_weather_delay_model"
+    if not MODEL_EVALUATION:
+        clf = xgboost.XGBRegressor(eval_metric='rmse', early_stopping_rounds=10)
+        params = {'n_estimators': np.arange(3,40,5), 
+                  'max_depth'   : np.arange(3,15,2), 
+                  'eta'         : np.arange(0.1, 1.5, 0.2),
+                  'subsample'   : np.arange(0.6, 1.0, 0.1)}
+    
+    elif MODEL_EVALUATION:
+        train, eval = train_test_split(train, test_size = 0.125)
+        Xtrain = train.drop(columns={'dep_delay'})
+        ytrain = train['dep_delay']
+        Xeval  = eval.drop(columns={'dep_delay'})
+        yeval  = eval['dep_delay']
+        eval_set = [(Xeval, yeval)]
 
-if os.path.isdir(model_dir) == False:
-    os.mkdir(model_dir)
-# Save the model
-joblib.dump(model, model_dir + "/flight_weather_delay_model.pkl")
+        clf = xgboost.XGBRegressor()
+        params = {'n_estimators': np.arange(3,40,5), 
+                  'max_depth'   : np.arange(3,15,2), 
+                  'eta'         : np.arange(0.1, 1.5, 0.2),
+                  'subsample'   : np.arange(0.6, 1.0, 0.1)}
 
+    gbc = GridSearchCV(clf, param_grid = params, cv = 3, n_jobs=-1, verbose=3, scoring='neg_root_mean_squared_error')
+    gbc.fit(Xtrain, ytrain, verbose = 1)
+    cv = pd.DataFrame(gbc.cv_results_)
 
-# Specify the schema of the models' input/output using the features (Xtrain) and labels (ytrain)
-input_schema = Schema(Xtrain)
-output_schema = Schema(ytrain)
-model_schema = ModelSchema(input_schema, output_schema)
-
-# Since the model cannot be overwritten, use the get_model/set_model workaround to create a new version of the model
-# and set is as the most updated
-flight_weather_delay_model = mr.python.create_model(
-    name="flight_weather_delay_model", 
-    metrics={"mean_absolute_error" : model_metrics[0]},
-    model_schema=model_schema,
-    version = int(get_model_last_version_number(project)) + 1,
-    description="XGBoost Regression model for flight departure delays, trained on flight info and weather info"
-)
-
-
-# Upload the model to the model registry
-flight_weather_delay_model.save(model_dir)
-set_model_last_version_number(project, get_model_last_version_number + 1)
+    print(cv.sort_values(by = 'rank_test_score').T)
+    print(gbc.best_params_)
 
 
 
