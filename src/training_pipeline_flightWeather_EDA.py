@@ -123,7 +123,7 @@ plt.show()
 
 '''
 The visualisation of the feature distribution showed that:
-- depDelay contains a small amount of outliers
+- dep_delay contains a small amount of outliers
 - there are considerably less flight on a saturday (this might mean that on saturday there is less delay)
 - during the winter months (from November to Febraury) the number of flight is 25% less than the rest of the months. No significant peaks.
 - the flight time have two different peaks at 8am and 17pm. There are very few flights before 6am and after 21pm.
