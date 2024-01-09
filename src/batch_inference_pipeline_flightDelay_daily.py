@@ -1029,9 +1029,7 @@ def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
 hopsworks_api_key = os.environ['HOPSWORKS_API_KEY']
 project = hopsworks.login(api_key_value = hopsworks_api_key)
 
-fs = project.get_feature_store()
-flight_weather_fg = fs.get_feature_group(name = 'flight_weather_dataset', version = 1)
-
+# Get today and tomorrow's timetable predictions
 today_timetable_prediction, tomorrow_timetable_prediction = get_timetable_predictions(project)
 
 # Save the files on Hopsworks
