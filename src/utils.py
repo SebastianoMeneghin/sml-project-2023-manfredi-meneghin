@@ -666,3 +666,16 @@ def dataset_normalizer(dataset_df):
                                 'flightIataNumber':'flight_iata_number'}, inplace= True)
     return dataset_df
 
+
+def create_last_model_performance_dataframe_row(size, model_metrics):
+    today_current_datetime   = datetime.now()
+    today_formatted_datetime = today_current_datetime.strftime("%Y-%m-%d_%H:%M:%S")
+    mae = model_metrics.get('mae')
+    mse = model_metrics.get('mse')
+
+    columns = ['timestamp','dateset_size','mae','mse']
+    row_df = pd.DataFrame(columns=columns)
+    row_df.loc[0] = [today_formatted_datetime, size, mae, mse]
+
+    return row_df
+
