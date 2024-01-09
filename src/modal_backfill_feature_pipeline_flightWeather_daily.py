@@ -284,7 +284,7 @@ def swedaviaAPI_daily_collector(mode):
 
     # Create the request_url, then get the subscription key from Swedavia API and set them in the header
     swedavia_url     = 'https://api.swedavia.se/flightinfo/v2/ARN/departures/' + date_label
-    subscription_key = 'SWEDAVIA_API_KEY'
+    subscription_key = os.environ['SWEDAVIA_API_KEY']
     headers = {
         "Ocp-Apim-Subscription-Key": subscription_key,
         "Accept": "application/json",
@@ -478,8 +478,10 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
     df.drop(columns={'index'}, inplace = True)
 
     # Create new columns for future df's data
-    new_column_names  = ['date','time', 'month', 'trip_time', 'day_of_week']
+    new_column_names  = ['time', 'month', 'trip_time', 'day_of_week']
     new_column_values = []
+    new_date_names    = 'date'
+    new_date_values   = []
     row_to_remove     = []
     status_set        = {}
 
@@ -523,13 +525,15 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
             day_of_the_week = get_day_of_week(dep_yyyy, dep_mm, dep_dd)
             # Save now: date_label, hour, month, trip_time, day_of_the_week
 
-            new_column_values.append([dep_date_label, dep_hh, dep_mm, trip_time, day_of_the_week])
+            new_column_values.append([dep_hh, dep_mm, trip_time, day_of_the_week])
+            new_date_values.append(dep_date_label)
 
 
         # Add the column "flight_within_60min" and calculate these values for each flight
         flight_within, column_name = swedaviaAPI_num_flight_within(60, df)
         df[column_name] = flight_within
         df[new_column_names] = new_column_values
+        df[new_date_names] = new_date_values
 
     # Drop useless columns
     df.drop(columns={'depScheduledTime', 'arrScheduledTime'}, inplace = True)
@@ -798,9 +802,9 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
         hour_grib_url = 'https://opendata-download-grid-archive.smhi.se/data/6/' + datestamp[1]
         hour_response = requests.get(hour_grib_url)
 
-        file_name = 'smhiAPI_' + date_label + '_' + get_padded_hour(datestamp[0])
-        save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
-        complete_name = os.path.join(save_path, file_name)
+        complete_name = 'smhiAPI_' + date_label + '_' + get_padded_hour(datestamp[0])
+        #save_path = "/mnt/c/Developer/University/SML/sml-project-2023-manfredi-meneghin/datasets/smhi_historical_data/"
+        #complete_name = os.path.join(save_path, file_name)
 
 
         with open(complete_name, "wb") as outfile: 
@@ -1162,6 +1166,11 @@ def dataset_normalizer(dataset_df):
     dataset_df.rename(columns={'depApIataCode' : 'dep_ap_iata_code', 'depDelay' : 'dep_delay', 'depApTerminal': 'dep_ap_terminal',
                                 'depApGate': 'dep_ap_gate', 'arrApIataCode' : 'arr_ap_iata_code', 'airlineIataCode':'airline_iata_code',
                                 'flightIataNumber':'flight_iata_number'}, inplace= True)
+    
+    # Some data should be casted to int64
+    convert_column = ['dep_delay', 'dep_ap_terminal', 'flight_within_60min', 'time', 'month','trip_time', 'day_of_week']
+    for col in convert_column:
+        dataset_df = dataset_df.astype({col: 'int64'})
     
     return dataset_df
 
