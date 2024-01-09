@@ -163,3 +163,4 @@ cython_debug/
 # Datasets
 zylaAPI_flights_raw/
 smhi_historical_grib/MESAN_*
+src/*.csv
