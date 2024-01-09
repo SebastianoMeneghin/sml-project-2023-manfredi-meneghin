@@ -963,58 +963,79 @@ def collect_tomorrow_flight_weather_info():
     return tomorrow_fw_normalized_df, tomorrow_timetable_attr_df
 
 
+def get_timetable_predictions(project):
+
+    today_flight_weather_df,    today_timetable_attr_df    = collect_today_flight_weather_info()
+    tomorrow_flight_weather_df, tomorrow_timetable_attr_df = collect_tomorrow_flight_weather_info()
+
+    # Download the pre-trained model and load it
+    mr        = project.get_model_registry()
+    model     = mr.get_model("flight_weather_delay_model", version=get_model_last_version_number)
+    model_dir = model.download()
+    model     = joblib.load(model_dir + "/flight_weather_delay_model.pkl")
+
+
+    # Predict today and tomorrow delays
+    X_today         = today_flight_weather_df.drop(columns={'dep_delay'})
+    X_tomorrow      = tomorrow_flight_weather_df.drop(columns={'dep_delay'})
+    y_pred_today    = model.predict(X_today)
+    y_pred_tomorrow = model.predict(X_tomorrow)
+
+
+    # Add to the flight_weather dataframe the predicated delays
+    today_timetable_attr_df['delay']    = y_pred_today.astype(int)
+    tomorrow_timetable_attr_df['delay'] = y_pred_tomorrow.astype(int)
+
+    today_timetable_attr_df    = get_timetable_labels(today_timetable_attr_df)
+    tomorrow_timetable_attr_df = get_timetable_labels(tomorrow_timetable_attr_df)
+
+    return today_timetable_attr_df, tomorrow_timetable_attr_df
+
+
+def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
+    # Get access to hopsworks memory
+    dataset_api = project.get_dataset_api()
+
+    with open("today_timetable_prediction.csv", "w") as today_outfile:
+        today_df.to_csv(today_outfile, index = False)
+
+        today_pred_path = os.path.abspath("today_timetable_prediction.csv")
+        dataset_api.upload(today_pred_path, "Resources/today_timetable_prediction", overwrite=True)
+    today_outfile.close()
+    os.remove("today_timetable_prediction.csv")
+
+    with open("tomorrow_timetable_prediction.csv", "w") as tomorrow_outfile:
+        tomorrow_df.to_csv(tomorrow_outfile, index = False)
+
+        tomorrow_pred_path = os.path.abspath("tomorrow_timetable_prediction.csv")
+        dataset_api.upload(tomorrow_pred_path, "Resources/tomorrow_timetable_prediction", overwrite=True)
+    tomorrow_outfile.close()
+    os.remove("tomorrow_timetable_prediction.csv")
+
+    print('Timetable predictions saved on hopsworks')
+
+
+
+
+
+
+
+
+
+
+
 
 ###### Function Body ######
-
 hopsworks_api_key = os.environ['HOPSWORKS_API_KEY']
 project = hopsworks.login(api_key_value = hopsworks_api_key)
 
 fs = project.get_feature_store()
 flight_weather_fg = fs.get_feature_group(name = 'flight_weather_dataset', version = 1)
 
-today_flight_weather_df,    today_timetable_attr_df    = collect_today_flight_weather_info()
-tomorrow_flight_weather_df, tomorrow_timetable_attr_df = collect_tomorrow_flight_weather_info()
-
-
-# Download the pre-trained model and load it
-mr        = project.get_model_registry()
-model     = mr.get_model("flight_weather_delay_model", version=get_model_last_version_number)
-model_dir = model.download()
-model     = joblib.load(model_dir + "/flight_weather_delay_model.pkl")
-
-
-# Predict today and tomorrow delays
-X_today         = today_flight_weather_df.drop(columns={'dep_delay'})
-X_tomorrow      = tomorrow_flight_weather_df.drop(columns={'dep_delay'})
-y_pred_today    = model.predict(X_today)
-y_pred_tomorrow = model.predict(X_tomorrow)
-
-
-# Add to the flight_weather dataframe the predicated delays
-today_prediction_df    = X_today
-tomorrow_prediction_df = X_tomorrow
-today_timetable_attr_df['delay']    = y_pred_today.astype(int)
-tomorrow_timetable_attr_df['delay'] = y_pred_tomorrow.astype(int)
-
-today_timetable_attr_df    = get_timetable_labels(today_timetable_attr_df)
-tomorrow_timetable_attr_df = get_timetable_labels(tomorrow_timetable_attr_df)
-
+today_timetable_prediction, tomorrow_timetable_prediction = get_timetable_predictions(project)
 
 # Save the files on Hopsworks
-dataset_api = project.get_dataset_api()
+save_timetable_predictions_on_hopsworks(project, today_timetable_prediction, tomorrow_timetable_prediction)
 
-with open("today_timetable_prediction.csv", "w") as today_outfile:
-    today_timetable_attr_df.to_csv(today_outfile, index = False)
 
-    today_pred_path = os.path.abspath("today_timetable_prediction.csv")
-    dataset_api.upload(today_pred_path, "Resources/today_timetable_prediction", overwrite=True)
-today_outfile.close()
-os.remove("today_timetable_prediction.csv")
 
-with open("tomorrow_timetable_prediction.csv", "w") as tomorrow_outfile:
-    tomorrow_timetable_attr_df.to_csv(tomorrow_outfile, index = False)
-
-    tomorrow_pred_path = os.path.abspath("tomorrow_timetable_prediction.csv")
-    dataset_api.upload(tomorrow_pred_path, "Resources/tomorrow_timetable_prediction", overwrite=True)
-tomorrow_outfile.close()
-os.remove("tomorrow_timetable_prediction.csv")
