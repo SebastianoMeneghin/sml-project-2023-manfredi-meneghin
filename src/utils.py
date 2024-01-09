@@ -651,10 +651,8 @@ def get_model_last_version_number(project):
 
 def get_model_last_version(project):
     last_version_number = get_model_last_version_number(project)
-
     mr    = project.get_model_registry()
     model = mr.get_model('flight_weather_delay', version = last_version_number)
-
     return model
 
 
@@ -666,6 +664,5 @@ def dataset_normalizer(dataset_df):
     dataset_df.rename(columns={'depApIataCode' : 'dep_ap_iata_code', 'depDelay' : 'dep_delay', 'depApTerminal': 'dep_ap_terminal',
                                 'depApGate': 'dep_ap_gate', 'arrApIataCode' : 'arr_ap_iata_code', 'airlineIataCode':'airline_iata_code',
                                 'flightIataNumber':'flight_iata_number'}, inplace= True)
-    
     return dataset_df
 
