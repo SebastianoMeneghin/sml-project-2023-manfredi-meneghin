@@ -1,14 +1,13 @@
 import os
-import re
-import json
-import requests
-import hopsworks
-import pygrib
-import math
-import pandas as pd
-import numpy as np
-import pandasql as sqldf
-from datetime import datetime
+import modal
+
+stub = modal.Stub("flight_delays_backfill_feature_pipeline_daily")
+image = modal.Image.debian_slim().pip_install(["hopsworks", "joblib", "seaborn","scikit-learn==1.1.1", "numpy",
+                                               "pandas", "pandasql", "xgboost", "cfgrib", "eccodes", "pygrib"])
+
+@stub.function(cpu=1.0, image=image, schedule=modal.Cron('0 2 * * *'), secret=modal.Secret.from_name("hopsworks_sml_project"))
+def f():
+    g()
 
 
 def one_day_backward(year, month, day):
@@ -175,6 +174,11 @@ def get_today_date():
     '''
     Return today's year, month and day numbers
     '''
+    import json
+    import requests
+    from datetime import datetime
+
+
     # Get today's date through TimeAPI
     time_url = "https://worldtimeapi.org/api/timezone/Europe/Stockholm"
     time_response     = requests.get(time_url)
@@ -197,6 +201,8 @@ def swedaviaAPI_flight_delay(scheduledDepTime, actualDepTime):
     Calculate the delay of a flight extracted through SwedaviaAPI
     given the scheduledDepTime and the actualDepTime
     '''
+    import math
+    from datetime import datetime
 
     # Transform the strings into datetime objects and calculate the delay in minutes
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
@@ -219,6 +225,8 @@ def swedaviaAPI_correct_UCT(time):
     equivalent time in Stockholm Time (+01:00 or +02:00 when DST on).
     It works only for the 2024, due to different DST condition year by year.
     '''
+    import math
+    from datetime import datetime
 
     # Destructure the received time
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
@@ -254,6 +262,16 @@ def swedaviaAPI_daily_collector(mode):
     of interest.
     The file is then saved in a .json format
     '''
+    import os
+    import re
+    import json
+    import requests
+    import hopsworks
+    import pygrib
+    import math
+    import pandas as pd
+    from datetime import datetime
+
     yyyy, mm, dd = get_today_date()
 
     if (mode == 'yesterday'):
@@ -266,7 +284,7 @@ def swedaviaAPI_daily_collector(mode):
 
     # Create the request_url, then get the subscription key from Swedavia API and set them in the header
     swedavia_url     = 'https://api.swedavia.se/flightinfo/v2/ARN/departures/' + date_label
-    subscription_key = 'a9042dc249f34e02b9d7512a1d85aa70'
+    subscription_key = 'SWEDAVIA_API_KEY'
     headers = {
         "Ocp-Apim-Subscription-Key": subscription_key,
         "Accept": "application/json",
@@ -324,6 +342,12 @@ def swedaviaAPI_num_flight_within(interval_min, flight_df):
     in the interval specified in minutes (-interval_min/2, + interval_min/2).
     This works with swedaviaAPI flights info, having datetime_format "%Y-%m-%dT%H:%M:%SZ"
     '''
+    import os
+    import re
+    import json
+    import math
+    import pandas as pd
+    from datetime import datetime
 
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -376,6 +400,17 @@ def get_day_of_week(year, month, day):
     It works only with date from 2000 to 2099 and it consider as first day (1) Monday,
     and as last day (7) Sunday.
     '''
+    import os
+    import re
+    import json
+    import requests
+    import hopsworks
+    import pygrib
+    import math
+    import pandas as pd
+    import pandasql as sqldf
+    from datetime import datetime
+
     leap_year = False
 
     month_val       = 0
@@ -422,6 +457,16 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
     - 'prediction' process the data in order to use them as feature for a prediction problem
     Return a dataframe containing the processed data
     '''
+    import os
+    import re
+    import json
+    import requests
+    import hopsworks
+    import pygrib
+    import math
+    import pandas as pd
+    from datetime import datetime
+
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
 
     # Get the json file
@@ -497,6 +542,17 @@ def get_wind_dir_label(wind_dir_degree):
   Returns the wind direction label (N, S, W, E, NE, etc...), according
   to the wind_direction_degree passed as input, in the interval [-180°, +180°].
   '''
+  import os
+  import re
+  import json
+  import requests
+  import hopsworks
+  import pygrib
+  import math
+  import pandas as pd
+  import pandasql as sqldf
+  from datetime import datetime
+
   wind_dir_label = ''
 
   pi         = 180
@@ -539,6 +595,17 @@ def get_current_date_time_and_dst():
     '''
     Return today's year, month and day numbers
     '''
+    import os
+    import re
+    import json
+    import requests
+    import hopsworks
+    import pygrib
+    import math
+    import pandas as pd
+    import pandasql as sqldf
+    from datetime import datetime
+
     # Get today's date through TimeAPI
     time_url = "https://worldtimeapi.org/api/timezone/Europe/Stockholm"
     time_response     = requests.get(time_url)
@@ -563,6 +630,9 @@ def smhiAPI_get_hour_from_datetime(timestamp):
     '''
     Extract the hour from a string containing a datetime in the format "%Y-%m-%dT%H:%M:%SZ"
     '''
+    import math
+    from datetime import datetime
+
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
     datetime_ts     = datetime.strptime(timestamp, datetime_format)
     hour            = datetime_ts.hour
@@ -617,6 +687,8 @@ def smhiAPI_get_daily_grib_datestamps(year, month, day, dst):
     and value equal to the datestamps of the GRIB file corresponding to the wanted stockholm_time.
     It works only for the 2024, due to different DST condition year by year.
     '''
+    import math
+    from datetime import datetime
 
     hour_dict   = {}
     hour_keys   = []
@@ -678,6 +750,17 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
     and give as result dataframe with all the uniformized and casted data, according to the rest of the project.
     This works only in 2024, due to the difference of DST changing year by year.
     '''
+    import os
+    import re
+    import json
+    import requests
+    import hopsworks
+    import pygrib
+    import math
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime
+
     # Set the latitude and longitude limits
     target_latitude_down  = 59.575368
     target_latitude_up    = 59.600368
@@ -866,6 +949,13 @@ def smhiAPI_acquire_daily_mesan(mode):
     Acquire the daily mesan analysis of one full day from smhiAPI Forecast
     Depending on the 'mode', that can be 'yesterday' or 'today'
     '''
+    import os
+    import re
+    import json
+    import requests
+    import math
+    import pandas as pd
+    from datetime import datetime
 
     year, month, day, hour, dst = get_current_date_time_and_dst()
 
@@ -1046,20 +1136,15 @@ def smhiAPI_acquire_daily_mesan(mode):
 
 
 def daily_flight_weather_dataframe_merger(flight_df, weather_df):
+    import os
+    import re
+    import json
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime
 
-    # Create a query to join the two datasets, according to date and time
-    query = """
-            select
-                *
-            from
-                flight_df f
-            inner join
-                weather_df w
-                    on f.date = w.date and f.time = w.time
-            """
-
-    # Join the two datasets according and remove duplicated columns
-    merged_df = sqldf.sqldf(query)
+    # Merge the two DataFrames on 'date' and 'time'
+    merged_df = pd.merge(flight_df, weather_df, on=['date', 'time'], how='inner')
     merged_df = merged_df.loc[:,~merged_df.columns.duplicated()].copy()
 
     print('Dataset merged created!')
@@ -1071,6 +1156,9 @@ def dataset_normalizer(dataset_df):
     Given a dataset with the columns names extracted from the APIs data, return a dataset (dataframe)
     with the name of the columns according to the feature group on Hopsworks
     '''
+    import math
+    import pandas as pd
+
     dataset_df.rename(columns={'depApIataCode' : 'dep_ap_iata_code', 'depDelay' : 'dep_delay', 'depApTerminal': 'dep_ap_terminal',
                                 'depApGate': 'dep_ap_gate', 'arrApIataCode' : 'arr_ap_iata_code', 'airlineIataCode':'airline_iata_code',
                                 'flightIataNumber':'flight_iata_number'}, inplace= True)
@@ -1083,6 +1171,10 @@ def collect_yesterday_flight_weather_info():
     Collect yesterday's flight and weather info
     Return a dataframe insertable on Hopsworks in 'flight_weather_dataset'
     '''
+    import os
+    import json
+    import pandas as pd
+
     # Collect from SwedaviaAPI raw information about yesterday's departed flights
     row_yesterday_flight_json, selected_date = swedaviaAPI_daily_collector('yesterday')
 
@@ -1101,16 +1193,17 @@ def collect_yesterday_flight_weather_info():
     return yesterday_fw_normalized_df
 
 
+def g():
+    import os
+    import json
+    import hopsworks
+    import pandas as pd
 
+    hopsworks_api_key = os.environ['HOPSWORKS_API_KEY']
+    project = hopsworks.login(api_key_value = hopsworks_api_key)
 
+    fs = project.get_feature_store()
+    flight_weather_fg = fs.get_feature_group(name = 'flight_weather_dataset', version = 1)
 
-###### Function Body ######
-
-hopsworks_api_key = os.environ['HOPSWORKS_API_KEY']
-project = hopsworks.login(api_key_value = hopsworks_api_key)
-
-fs = project.get_feature_store()
-flight_weather_fg = fs.get_feature_group(name = 'flight_weather_dataset', version = 1)
-
-yesterday_fw_info_df = collect_yesterday_flight_weather_info()
-flight_weather_fg.insert(yesterday_fw_info_df)
+    yesterday_fw_info_df = collect_yesterday_flight_weather_info()
+    flight_weather_fg.insert(yesterday_fw_info_df)
