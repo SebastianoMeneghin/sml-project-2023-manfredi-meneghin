@@ -1217,7 +1217,7 @@ def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
         today_df_padded.to_csv(today_outfile, index = False)
 
         today_pred_path = os.path.abspath("today_timetable_prediction.csv")
-        dataset_api.upload(today_pred_path, "Resources/today_timetable_prediction", overwrite=True)
+        dataset_api.upload(today_pred_path, "Resources/today_timetable_prediction.csv", overwrite=True)
     today_outfile.close()
     os.remove("today_timetable_prediction.csv")
 
@@ -1225,7 +1225,7 @@ def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
         tomorrow_df_padded.to_csv(tomorrow_outfile, index = False)
 
         tomorrow_pred_path = os.path.abspath("tomorrow_timetable_prediction.csv")
-        dataset_api.upload(tomorrow_pred_path, "Resources/tomorrow_timetable_prediction", overwrite=True)
+        dataset_api.upload(tomorrow_pred_path, "Resources/tomorrow_timetable_prediction.csv", overwrite=True)
     tomorrow_outfile.close()
     os.remove("tomorrow_timetable_prediction.csv")
 
