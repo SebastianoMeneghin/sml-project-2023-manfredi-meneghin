@@ -824,23 +824,6 @@ def dataset_normalizer(dataset_df):
     return df, iata_df
 
 
-def get_model_last_version_number(project):
-    '''
-    Given the Hopsworks Project "project", get the last_version_number of the dataset
-    '''
-    # Get dataset API to download the last_version_number from Hopsworks
-    dataset_api = project.get_dataset_api()
-    dataset_api.download("Resources/dataset_version/last_version_number.json")
-
-    # Open JSON file, return it as a dictionary
-    json_file = open('last_version_number.json')
-    json_data = json.load(json_file)
-
-    last_version_number = json_data[0]['last_version_number']
-
-    return last_version_number
-
-
 def get_hour_minute_timetable_label(hour, minute):
     '''
     Given hour (int) and minute (int) return them with format "hh:MM" (str)
@@ -970,7 +953,7 @@ def get_timetable_predictions(project):
 
     # Download the pre-trained model and load it
     mr        = project.get_model_registry()
-    model     = mr.get_model("flight_weather_delay_model", version=get_model_last_version_number)
+    model     = mr.get_model("flight_weather_delay_model", version=1)
     model_dir = model.download()
     model     = joblib.load(model_dir + "/flight_weather_delay_model.pkl")
 
