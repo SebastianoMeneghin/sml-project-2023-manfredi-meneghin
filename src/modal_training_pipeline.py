@@ -2,10 +2,10 @@ import os
 import modal
 
 stub = modal.Stub("flight_delays_training_pipeline_daily")
-image = modal.Image.debian_slim().pip_install(["hopsworks", "joblib", "seaborn","scikit-learn==1.1.1", "numpy"
+image = modal.Image.debian_slim().pip_install(["hopsworks", "joblib", "seaborn","scikit-learn==1.1.1", "numpy",
                                                "pandas", "pandasql", "xgboost", "cfgrib", "eccodes", "pygrib"])
 
-@stub.function(cpu=1.0, image=image, schedule=modal.Period(days=1), secret=modal.Secret.from_name("hopsworks_sml_project"))
+@stub.function(cpu=1.0, image=image, schedule=modal.Cron('10 2 * * *'), secret=modal.Secret.from_name("hopsworks_sml_project"))
 def f():
     g()
 
@@ -114,19 +114,18 @@ def training_pipeline_model_training_and_saving(project, df):
 
 
     ##### MODEL SAVING #####
-    model_dir  = "model_dir"
+    #model_dir  = "model_dir"
     file_name  = 'flight_weather_delay_model.pkl'
 
-    if os.path.isdir(model_dir) == False:
-        os.mkdir(model_dir)
     # Save the model
-    joblib.dump(model, os.path.join(model_dir, file_name))
+    joblib.dump(model, 'flight_weather_delay_model.pkl')
 
     # Overwrite the model
     dataset_api    = project.get_dataset_api()
-    local_path     = os.path.join(model_dir, file_name)
+    local_path     = os.path.abspath(file_name)
     hopsworks_path = '/Projects/SMLFinalProject3/Models/flight_weather_delay_model/1/'
     dataset_api.upload(local_path, hopsworks_path, overwrite=True)
+    os.remove(local_path)
 
     return model_metrics
 
