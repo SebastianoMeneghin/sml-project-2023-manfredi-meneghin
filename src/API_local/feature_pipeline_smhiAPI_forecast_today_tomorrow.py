@@ -196,6 +196,9 @@ def smhiAPI_acquire_realtime_forecast(mode):
     total_df_out.close()
 
 
+
+
+
 smhiAPI_acquire_realtime_forecast('today')
 smhiAPI_acquire_realtime_forecast('tomorrow')
 

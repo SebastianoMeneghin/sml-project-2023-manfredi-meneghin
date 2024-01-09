@@ -497,6 +497,7 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
 
 
 
+
 result, selected_date = swedaviaAPI_daily_collector('yesterday')
 swedaviaAPI_flight_processor(result, selected_date, 'historical')
 
