@@ -126,7 +126,7 @@ print(f'\nTrained model metrics: {model_metrics}\n')
 
 ##### MODEL SAVING #####
 mr = project.get_model_registry()
-model_dir="flight_weather_delay_model"
+model_dir="flight_weather_delay_dir"
 
 if os.path.isdir(model_dir) == False:
     os.mkdir(model_dir)
