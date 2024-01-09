@@ -89,7 +89,6 @@ model_metrics = {'mae' :mean_absolute_error(ytest, y_pred), 'mse': mean_squared_
 
 
 ##### MODEL SAVING #####
-mr = project.get_model_registry()
 model_dir  = "model_dir"
 file_name  = 'flight_weather_delay_model.pkl'
 
