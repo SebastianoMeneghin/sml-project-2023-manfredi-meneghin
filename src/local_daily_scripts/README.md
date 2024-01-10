@@ -41,6 +41,8 @@ The project can be divided into **four main pipelines**:
 
 [**Hopsworks**](https://www.hopsworks.ai/) - MLOps platform
 
+[**Zyla API**](https://zylalabs.com/) - historical flight API
+
 [**Swedavia API**](https://apideveloper.swedavia.se/) - real-time flight API
 
 [**SMHI API**](https://opendata.smhi.se/apidocs/metfcst/index.html) - real-time forecast API
