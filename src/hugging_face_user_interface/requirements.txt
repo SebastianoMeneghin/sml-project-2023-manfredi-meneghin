@@ -1,0 +1,4 @@
+gradio
+hopsworks
+pandas
+numpy
