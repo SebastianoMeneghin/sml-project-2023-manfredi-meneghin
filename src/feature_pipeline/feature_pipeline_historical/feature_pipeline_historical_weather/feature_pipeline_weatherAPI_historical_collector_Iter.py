@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import json
 import os
-from utils import get_date_label, get_year_month_label, get_mesan_date_label, get_padded_hour
+from src.other.utils import get_date_label, get_year_month_label, get_mesan_date_label, get_padded_hour
 import pygrib
 
 
