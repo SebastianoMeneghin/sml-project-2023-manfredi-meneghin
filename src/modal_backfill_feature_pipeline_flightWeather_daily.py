@@ -5,7 +5,7 @@ stub = modal.Stub("flight_delays_backfill_feature_pipeline_daily")
 image = modal.Image.debian_slim().pip_install(["hopsworks", "joblib", "seaborn","scikit-learn==1.1.1", "numpy",
                                                "pandas", "pandasql", "xgboost", "cfgrib", "eccodes", "pygrib"])
 
-@stub.function(cpu=1.0, image=image, schedule=modal.Cron('0 2 * * *'), secret=modal.Secret.from_name("hopsworks_sml_project"))
+@stub.function(cpu=1.0, image=image, schedule=modal.Cron('0 22 * * *'), secret=modal.Secret.from_name("hopsworks_sml_project"))
 def f():
     g()
 
