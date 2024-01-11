@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 import math
-from utils import get_day_of_week, get_date_label, zylaAPI_num_flight_within
+from src.other.utils import get_day_of_week, get_date_label, zylaAPI_num_flight_within
 from datetime import datetime
 
 

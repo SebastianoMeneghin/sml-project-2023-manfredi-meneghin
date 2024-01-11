@@ -1,6 +1,6 @@
 import requests
 import json
-from utils import zylaAPI_url
+from src.other.utils import zylaAPI_url
 
 
 headers = {

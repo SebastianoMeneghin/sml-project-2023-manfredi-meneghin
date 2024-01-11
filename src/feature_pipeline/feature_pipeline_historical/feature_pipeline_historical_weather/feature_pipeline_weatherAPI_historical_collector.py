@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import json
 import os
-from utils import get_df_label_from_grib_label
+from src.other.utils import get_df_label_from_grib_label
 import pygrib
 
 columns = ['date', 'time', 'temperature', 'visibility', 'pressure', 'humidity', 'gusts_wind', 'u_wind', 'v_wind', 'prep_1h', 

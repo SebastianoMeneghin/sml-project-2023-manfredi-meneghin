@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 import os
-from utils import get_date_label, get_padded_hour, one_hour_forward, one_hour_backward, get_wind_dir_label, one_day_forward
+from src.other.utils import get_date_label, get_padded_hour, one_hour_forward, one_hour_backward, get_wind_dir_label, one_day_forward
 from datetime import datetime
 
 

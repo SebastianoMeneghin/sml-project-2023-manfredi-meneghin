@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import math
 import numpy as np
-from utils import get_wind_dir_label
+from src.other.utils import get_wind_dir_label
 
 ######################################################################################################
 # Here a smhiAPI historical mesan file is read and its values are selected, changed, dropped or

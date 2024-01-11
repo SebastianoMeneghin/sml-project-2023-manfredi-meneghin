@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import json
-from utils import merge_and_extract_zylaAPI_flight_infos
+from src.other.utils import merge_and_extract_zylaAPI_flight_infos
 
 # Confirm that the script has started, since it requires some time
 print('*Script started\n')
