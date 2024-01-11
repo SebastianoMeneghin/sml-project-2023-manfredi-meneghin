@@ -60,9 +60,19 @@ def get_specific_flights(day, max_delay, departure_hour, ampm, weather, destinat
     
     return filtered_df
 
+def full_day_departure(day):
+    today_df, tomorrow_df = access_online_dataframe()
+    df = pd.DataFrame()
+    if(day == 'today'):
+        df = today_df
+    else:
+        df = tomorrow_df
+
+    return df
 
 
-flights = gr.Interface(
+
+specific_flights = gr.Interface(
     get_specific_flights,
     [
         gr.Radio(["today", "tomorrow"], type="value", label="Day", info="When do you have the plane?"),
@@ -78,4 +88,13 @@ flights = gr.Interface(
     "dataframe",
 )
 
-flights.launch()
+total_departure = gr.Interface(
+    full_day_departure,
+    [
+        gr.Radio(["Today", "Tomorrow"], type="value", label="Departure", info="When are you departing?"),
+    ],
+    "dataframe",
+)
+
+interface = gr.TabbedInterface([total_departure, specific_flights], ["Full Day Departure", "Specific Flights"])
+interface.launch()
