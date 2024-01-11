@@ -67,7 +67,7 @@ def create_last_model_performance_dataframe_row(size, model_metrics):
     return row_df
 
 
-def training_pipeline_feature_collect(feature_store):
+def training_pipeline_feature_collect():
     import json
     import os
     import joblib
@@ -78,15 +78,66 @@ def training_pipeline_feature_collect(feature_store):
     from datetime import datetime
 
     # Read data into dataframe and preprocess the dataset 
+    project       = hopsworks.login(api_key_value = os.environ['HOPSWORKS_API_KEY'])
+    feature_store = project.get_feature_store()
     feature_group = feature_store.get_feature_group(name = 'flight_weather_dataset', version=1)
     df            = feature_group.read(dataframe_type='pandas')
     df            = uniform_dataframe_for_training(df)
 
-    # Return processed data as dataframe
     return df
 
 
-def training_pipeline_model_training_and_saving(project, df):
+def replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory):
+
+    import hopsworks
+    import pandas as pandas
+    import os
+    import json
+    from hopsworks.client.exceptions import RestAPIError
+
+    # Login in hopsworks
+    project = hopsworks.login(api_key_value = os.environ['HOPSWORKS_API_KEY'])
+    dataset_api = project.get_dataset_api()
+
+    # Get the model local path
+    file_path      = os.path.abspath(local_file_name)
+
+    # Remove model from Hopsworks
+    try:
+        dataset_api.remove(hopsworks_directory + hopsworks_file_name)
+    except RestAPIError:
+        print('I was not able to remove the file')
+    #Create new directory for model
+    try:
+        dataset_api.mkdir(hopsworks_directory)
+    except RestAPIError:
+        print("The folder already exists")
+
+    # Upload the new model
+    dataset_api.upload(file_path,  hopsworks_directory, overwrite=True)
+
+
+def replace_file_on_hopsworks_Iter(local_file_name, hopsworks_file_name, hopsworks_directory):
+
+    import hopsworks
+    import pandas as pandas
+    import os
+    import json
+    from hopsworks.client.exceptions import RestAPIError
+
+    OPERATION_DONE = False
+    while(not OPERATION_DONE):
+        try:
+            replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory)
+            OPERATION_DONE = True
+            print('\n**** File ' + local_file_name + ' replaced successfully! ****\n')
+
+        except RestAPIError as e:
+            print(e)
+            print('\n\n**** Another temptative started now ****\n\n')
+
+
+def training_pipeline_model_training_and_saving(df, save_also_schema):
     import json
     import os
     import joblib
@@ -94,9 +145,16 @@ def training_pipeline_model_training_and_saving(project, df):
     import numpy as np
     import xgboost
     import hopsworks
+    import time
     from datetime import datetime
+    from hsml.schema import Schema
+    from hsml.model_schema import ModelSchema
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_absolute_error, mean_squared_error
+    from hopsworks.client.exceptions import RestAPIError
+
+    # Set the hopsworks file directory
+    hopsworks_directory = '/Projects/SMLFinalProject3/Models/flight_weather_delay_model/2/'
 
 
     ##### MODEL TRAINING #####
@@ -113,24 +171,36 @@ def training_pipeline_model_training_and_saving(project, df):
     model_metrics = {'mae' :mean_absolute_error(ytest, y_pred), 'mse': mean_squared_error(ytest, y_pred)}
 
 
-    ##### MODEL SAVING #####
-    #model_dir  = "model_dir"
-    file_name  = 'flight_weather_delay_model.pkl'
+    # Set the model local file name and save it locally
+    model_file_name  = 'flight_weather_delay_model.pkl'
+    joblib.dump(model, model_file_name)
 
-    # Save the model
-    joblib.dump(model, 'flight_weather_delay_model.pkl')
+    # Iteratively try to replace the model on Hopsworks with this new version
+    replace_file_on_hopsworks_Iter(model_file_name, model_file_name, hopsworks_directory)
 
-    # Overwrite the model
-    dataset_api    = project.get_dataset_api()
-    local_path     = os.path.abspath(file_name)
-    hopsworks_path = '/Projects/SMLFinalProject3/Models/flight_weather_delay_model/1/'
-    dataset_api.upload(local_path, hopsworks_path, overwrite=True)
-    os.remove(local_path)
+    if save_also_schema:
+        # Specify the schema of the models' input/output using the features (Xtrain) and labels (ytrain)
+        input_schema  = Schema(Xtrain)
+        output_schema = Schema(ytrain)
+        schema        = ModelSchema(input_schema, output_schema)
+        
+        # Set the schema local file name and save it locally
+        schema_file_name = 'model_schema.json'
+        with open(schema_file_name, 'w+') as file:
+            json.dump(schema, file, default=lambda o: getattr(o, "__dict__", o), sort_keys=True, indent=2)
 
+        # Iteratively try to replace the model schema on Hopsworks with this new version
+        replace_file_on_hopsworks_Iter(schema_file_name, schema_file_name, hopsworks_directory)
+        os.remove(schema_file_name)
+
+    # Remove the model file from the memory
+    os.remove(model_file_name)
+
+    # Return the model metrics in order to save them in the Model Metrics feature group
     return model_metrics
 
 
-def training_pipeline_save_model_performances(feature_store, dataset_size, model_metrics):
+def training_pipeline_save_model_performances(dataset_size, model_metrics):
     import json
     import os
     import pandas as pd
@@ -138,7 +208,9 @@ def training_pipeline_save_model_performances(feature_store, dataset_size, model
     from datetime import datetime
     from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-    # Save the new model performances in the dedicated feature store
+    # Save the new model performances in the dedicated feature group
+    project           = hopsworks.login(api_key_value = os.environ['HOPSWORKS_API_KEY'])
+    feature_store     = project.get_feature_store()
     performance_fg     = feature_store.get_feature_group(name = 'model_performance', version = 1)
     performance_df_row = create_last_model_performance_dataframe_row(dataset_size, model_metrics)
     performance_fg.insert(performance_df_row)
@@ -156,13 +228,8 @@ def g():
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-    # Connect to hopsworks and get data
-    hopsworks_api_key = os.environ['HOPSWORKS_API_KEY']
-    project           = hopsworks.login(api_key_value = hopsworks_api_key)
-    feature_store     = project.get_feature_store()
-
-    df            = training_pipeline_feature_collect(feature_store)
-    model_metrics = training_pipeline_model_training_and_saving(project, df)
+    df            = training_pipeline_feature_collect()
+    model_metrics = training_pipeline_model_training_and_saving(df, False)
 
     # Save the new model performances in the dedicated feature store
-    training_pipeline_save_model_performances(feature_store, df.shape[0], model_metrics)  
+    training_pipeline_save_model_performances(df.shape[0], model_metrics)

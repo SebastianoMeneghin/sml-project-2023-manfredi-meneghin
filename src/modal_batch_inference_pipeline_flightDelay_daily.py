@@ -1157,7 +1157,7 @@ def get_timetable_predictions(project):
 
     # Download the pre-trained model and load it
     mr        = project.get_model_registry()
-    model     = mr.get_model("flight_weather_delay_model", version=1)
+    model     = mr.get_model("flight_weather_delay_model", version=2)
     model_dir = model.download()
     model     = joblib.load(model_dir + "/flight_weather_delay_model.pkl")
 
@@ -1184,6 +1184,8 @@ def get_dataframe_padded(dataframe, padding_column_number):
   Given a dataframe and a padding_measure, return the same dataframe a number of
   new padding column containing only the value "padding_column_number"
   '''
+  import pandas as pd
+  import math
 
   padding_column = [padding_column_number] * dataframe.shape[0]
 
@@ -1194,7 +1196,71 @@ def get_dataframe_padded(dataframe, padding_column_number):
   return dataframe
 
 
-def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
+def create_redundant_dataframes(today_df, tomorrow_df, redundancy_factor):
+
+  import pandas as pd
+  import math
+
+  minimum_size      = tomorrow_df.shape[0] * redundancy_factor
+  multiplier_factor = math.ceil(minimum_size/(today_df.shape[0]))
+  
+  tomorrow_df = pd.concat([tomorrow_df] * redundancy_factor)
+  today_df    = pd.concat([today_df]    * multiplier_factor)
+
+  return today_df, tomorrow_df
+
+
+def replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory):
+
+    import hopsworks
+    import pandas as pandas
+    import os
+    import json
+    from hopsworks.client.exceptions import RestAPIError
+
+    # Login in hopsworks
+    project = hopsworks.login(api_key_value = os.environ['HOPSWORKS_API_KEY'])
+    dataset_api = project.get_dataset_api()
+
+    # Get the model local path
+    file_path      = os.path.abspath(local_file_name)
+
+    # Remove model from Hopsworks
+    try:
+        dataset_api.remove(hopsworks_directory + hopsworks_file_name)
+    except RestAPIError:
+        print('I was not able to remove the file')
+    #Create new directory for model
+    try:
+        dataset_api.mkdir(hopsworks_directory)
+    except RestAPIError:
+        print("The folder already exists")
+
+    # Upload the new model
+    dataset_api.upload(file_path,  hopsworks_directory, overwrite=True)
+
+
+def replace_file_on_hopsworks_Iter(local_file_name, hopsworks_file_name, hopsworks_directory):
+
+    import hopsworks
+    import pandas as pandas
+    import os
+    import json
+    from hopsworks.client.exceptions import RestAPIError
+
+    OPERATION_DONE = False
+    while(not OPERATION_DONE):
+        try:
+            replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory)
+            OPERATION_DONE = True
+            print('\n**** File ' + local_file_name + ' replaced successfully! ****\n')
+
+        except RestAPIError as e:
+            print(e)
+            print('\n\n**** Another temptative started now ****\n\n')
+
+
+def save_timetable_predictions_on_hopsworks(today_df, tomorrow_df):
     
     import os
     import re
@@ -1207,32 +1273,30 @@ def save_timetable_predictions_on_hopsworks(project, today_df, tomorrow_df):
     import numpy as np
     from datetime import datetime
 
-    # Get access to hopsworks memory
-    dataset_api = project.get_dataset_api()
+    # Create redundant dataframe in order to achieve a sufficient sive to have them save in Hopsworks
+    redundant_today_df, redundant_tomorrow_df = create_redundant_dataframes(today_df, tomorrow_df, 50)
 
-    today_df_padded    = get_dataframe_padded(today_df,    50)
-    tomorrow_df_padded = get_dataframe_padded(tomorrow_df, 50)
+    hopsworks_today_directory    = "Resources/today_timetable_prediction"
+    hopsworks_tomorrow_directory = "Resources/tomorrow_timetable_prediction"
+    today_file_name              = "today_timetable_prediction.csv"
+    tomorrow_file_name           = "tomorrow_timetable_prediction.csv"
 
-    with open("today_timetable_prediction.csv", "w") as today_outfile:
-        today_df_padded.to_csv(today_outfile, index = False)
-
-        today_pred_path = os.path.abspath("today_timetable_prediction.csv")
-        dataset_api.upload(today_pred_path, "Resources/today_timetable_prediction", overwrite=True)
+    # Save new dataframe locally
+    with open(today_file_name, "w") as today_outfile:
+        redundant_today_df.to_csv(today_outfile, index = False)
     today_outfile.close()
-    os.remove("today_timetable_prediction.csv")
 
-    with open("tomorrow_timetable_prediction.csv", "w") as tomorrow_outfile:
-        tomorrow_df_padded.to_csv(tomorrow_outfile, index = False)
-
-        tomorrow_pred_path = os.path.abspath("tomorrow_timetable_prediction.csv")
-        dataset_api.upload(tomorrow_pred_path, "Resources/tomorrow_timetable_prediction", overwrite=True)
+    with open(tomorrow_file_name, "w") as tomorrow_outfile:
+        redundant_tomorrow_df.to_csv(tomorrow_outfile, index = False)
     tomorrow_outfile.close()
-    os.remove("tomorrow_timetable_prediction.csv")
 
-    print('Timetable predictions saved on hopsworks')
+    # Replace timetable on Hopsworks with the new oens
+    replace_file_on_hopsworks_Iter(today_file_name,    today_file_name,    hopsworks_today_directory)
+    replace_file_on_hopsworks_Iter(tomorrow_file_name, tomorrow_file_name, hopsworks_tomorrow_directory)
 
-
-
+    # Removed local dataframes
+    os.remove(today_file_name)
+    os.remove(tomorrow_file_name)
 
 
 def g():
@@ -1248,7 +1312,6 @@ def g():
   today_timetable_prediction, tomorrow_timetable_prediction = get_timetable_predictions(project)
 
   # Save the files on Hopsworks
-  save_timetable_predictions_on_hopsworks(project, today_timetable_prediction, tomorrow_timetable_prediction)
-
+  save_timetable_predictions_on_hopsworks(today_timetable_prediction, tomorrow_timetable_prediction)
 
 

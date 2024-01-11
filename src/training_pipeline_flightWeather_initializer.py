@@ -111,9 +111,9 @@ model_schema = ModelSchema(input_schema, output_schema)
 # and set is as the most updated
 flight_weather_delay_model = mr.python.create_model(
     name="flight_weather_delay_model", 
-    metrics={"mean_absolute_error" : model_metrics[0]},
+    metrics={"mean_absolute_error" : model_metrics.get('mse')},
     model_schema=model_schema,
-    version = 1,
+    version = 2,
     description="XGBoost Regression model for flight departure delays, trained on flight info and weather info"
 )
 
