@@ -937,6 +937,10 @@ def uniform_dataframe_for_training(df):
                         'wind_speed': 'wind_speed', 'wind_dir': 'wind_dir', 'total_cloud': 'total_cloud', 'low_cloud': 'low_cloud', 
                         'medium_cloud': 'medium_cloud', 'high_cloud': 'high_cloud', 'sort_prep': 'sort_prep'}, inplace=True)
     
+    
+    iata_df = df[['arr_ap_iata_code', 'flight_iata_number']]
+
+
     df.drop(  columns ={'trip_time', 'dep_ap_gate', 'flight_iata_number', 'status', 'dep_ap_terminal', 'date', 'high_cloud', 
                         'medium_cloud', 'total_cloud', 'wind_speed','pressure', 'dep_ap_iata_code', 'humidity', 'flight_within_60min'}, inplace=True)
 
@@ -1117,11 +1121,15 @@ def uniform_dataframe_for_training(df):
     df[new_hour_columns] = hour_labels
 
     # Convert all the data in int64, delete some of the feature which are not needed
+    delay_df = pd.DataFrame()
+    delay_df = df['dep_delay']
+    df.drop(columns={'dep_delay'},inplace=True)
     df = df.astype('int32')
     df.drop(columns ={'normal_visibility','late_morning','stockholm_sky','lord_day','outer_flight',
                       'other_months','rain','normal_temperature','other_wind'}, inplace=True)
-
-    return df
+    df['dep_delay'] = delay_df
+  
+    return df, iata_df
 
 
 def get_hour_minute_timetable_label(hour, minute):
