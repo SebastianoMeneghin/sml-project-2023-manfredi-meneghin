@@ -36,7 +36,7 @@ The project can be divided into **four main pipelines**:
 
 
 ## Architecture
-<img alt="Machine Learning Pipeline Schema" src="/images/pipeline.png" >
+<img alt="Machine Learning Pipeline Schema" src="/images/MLPipeline.png" >
 
 
 ## Pipelines description
