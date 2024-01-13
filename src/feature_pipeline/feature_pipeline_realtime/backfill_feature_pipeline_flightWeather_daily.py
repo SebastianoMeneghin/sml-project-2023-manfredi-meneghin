@@ -973,10 +973,10 @@ def smhiAPI_acquire_daily_mesan(mode):
 
     total_df = pd.DataFrame()
     # If mode is 'yesterday', roll-back to the historical data extraction process
-    if (mode in {'yesterday','two_days_ago'}):
+    if (mode == 'yesterday' or mode == 'two_days_ago'):
         yearbefore, monthbefore, daybefore = one_day_backward(year, month, day)
         if (mode == 'two_days_ago'):
-            yearbefore, monthbefore, daybefore = one_day_backward(year, month, day)
+            yearbefore, monthbefore, daybefore = one_day_backward(yearbefore, monthbefore, daybefore)
 
         datebefore = get_date_label(yearbefore, monthbefore, daybefore, 'hyphen')
 

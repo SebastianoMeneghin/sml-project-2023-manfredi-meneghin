@@ -215,6 +215,7 @@ ciccio             = ciccio.rename(columns={'airport':'airport code' , 'ArrivalA
 today_dataframe    = ciccio[selected_columns]
 pasticcio          = get_tomorrow_dataframe()
 pasticcio          = pasticcio.rename(columns={'airport':'airport code','ArrivalAirportEnglish':'destination', 'flight_number':'flight number'})
+tomorrow_dataframe = pasticcio[selected_columns]
 performance_metric = get_metrics()
 
 
