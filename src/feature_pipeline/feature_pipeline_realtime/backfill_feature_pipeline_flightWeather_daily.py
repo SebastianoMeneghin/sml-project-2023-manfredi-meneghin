@@ -258,7 +258,7 @@ def swedaviaAPI_correct_UCT(time):
 def swedaviaAPI_daily_collector(mode):
     '''
     Get a full-day collection of flight info from Swedavia FlightInfoAPI
-    The input mode could be "yesterday", "today" or "tomorrow", depending on the day
+    The input mode could be "two_days_ago", "yesterday", "today" or "tomorrow", depending on the day
     of interest.
     The file is then saved in a .json format
     '''
@@ -276,9 +276,11 @@ def swedaviaAPI_daily_collector(mode):
 
     if (mode == 'yesterday'):
         yyyy, mm, dd = one_day_backward(yyyy, mm, dd)
-
     elif (mode == 'tomorrow'):
         yyyy, mm, dd = one_day_forward(yyyy, mm, dd)
+    elif (mode == 'two_days_ago'):
+        yyyy, mm, dd = one_day_backward(yyyy, mm, dd)
+        yyyy, mm, dd = one_day_backward(yyyy, mm, dd)
 
     date_label = get_date_label(yyyy, mm, dd, 'hyphen')
 
@@ -951,7 +953,7 @@ def smhiAPI_acquire_daily_mesan_historical_plugin(year, month, day, dst):
 def smhiAPI_acquire_daily_mesan(mode):
     '''
     Acquire the daily mesan analysis of one full day from smhiAPI Forecast
-    Depending on the 'mode', that can be 'yesterday' or 'today'
+    Depending on the 'mode', that can be 'two_days_ago', 'yesterday' or 'today'
     '''
     import os
     import re
@@ -971,9 +973,12 @@ def smhiAPI_acquire_daily_mesan(mode):
 
     total_df = pd.DataFrame()
     # If mode is 'yesterday', roll-back to the historical data extraction process
-    if (mode == 'yesterday'):
+    if (mode in {'yesterday','two_days_ago'}):
         yearbefore, monthbefore, daybefore = one_day_backward(year, month, day)
-        datebefore                         = get_date_label(yearbefore, monthbefore, daybefore, 'hyphen')
+        if (mode == 'two_days_ago'):
+            yearbefore, monthbefore, daybefore = one_day_backward(year, month, day)
+
+        datebefore = get_date_label(yearbefore, monthbefore, daybefore, 'hyphen')
 
         print('Acquiring meteorological data about:' + datebefore)
 
@@ -1175,6 +1180,33 @@ def dataset_normalizer(dataset_df):
     return dataset_df
 
 
+def collect_two_days_ago_flight_weather_info():
+    '''
+    Collect two_days_ago's flight and weather info
+    Return a dataframe insertable on Hopsworks in 'flight_weather_dataset'
+    '''
+    import os
+    import json
+    import pandas as pd
+
+    # Collect from SwedaviaAPI raw information about two_days_ago's departed flights
+    row_two_days_ago_flight_json, selected_date = swedaviaAPI_daily_collector('two_days_ago')
+
+    # Process raw information into a dataframe with wanted columns and data
+    two_days_ago_flight_df = swedaviaAPI_flight_processor(row_two_days_ago_flight_json, selected_date, 'historical')
+
+    # Collect from the SmhiAPI the two_days_ago's wheather measurements (detailed by hour)
+    two_days_ago_wheather_df = smhiAPI_acquire_daily_mesan('two_days_ago')
+
+    # Merge the two dataframes
+    two_days_ago_fw_df = daily_flight_weather_dataframe_merger(two_days_ago_flight_df, two_days_ago_wheather_df)
+
+    # Normalize the unified dataframe
+    two_days_ago_fw_normalized_df = dataset_normalizer(two_days_ago_fw_df)
+
+    return two_days_ago_fw_normalized_df
+
+
 def collect_yesterday_flight_weather_info():
     '''
     Collect yesterday's flight and weather info
@@ -1214,5 +1246,5 @@ def g():
     fs = project.get_feature_store()
     flight_weather_fg = fs.get_feature_group(name = 'flight_weather_dataset', version = 1)
 
-    yesterday_fw_info_df = collect_yesterday_flight_weather_info()
-    flight_weather_fg.insert(yesterday_fw_info_df)
+    two_days_ago_fw_info_df = collect_two_days_ago_flight_weather_info()
+    flight_weather_fg.insert(two_days_ago_fw_info_df)
