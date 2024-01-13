@@ -110,11 +110,7 @@ Then, you will need to **grant access to a flight information and a weather fore
 *Roll up your sleeves. Now you are ready for real!*
 
 
-
-
-
-
-### Software used
+## Software used
 [**Visual Studio Code**](https://code.visualstudio.com/) - main IDE
 
 [**GitKraken**](https://www.gitkraken.com/) - git versioning
