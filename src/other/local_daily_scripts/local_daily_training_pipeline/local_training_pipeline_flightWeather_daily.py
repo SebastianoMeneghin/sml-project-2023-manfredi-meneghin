@@ -251,10 +251,6 @@ def replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_di
     except RestAPIError:
         print('I was not able to remove the file')
     #Create new directory for model
-    try:
-        dataset_api.mkdir(hopsworks_directory)
-    except RestAPIError:
-        print("The folder already exists")
 
     # Upload the new model
     dataset_api.upload(file_path,  hopsworks_directory, overwrite=True)

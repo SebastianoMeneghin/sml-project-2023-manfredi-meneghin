@@ -255,6 +255,25 @@ def training_pipeline_feature_collect():
     return df
 
 
+def replace_model_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory):
+
+    import hopsworks
+    import pandas as pandas
+    import os
+    import json
+    from hopsworks.client.exceptions import RestAPIError
+
+    # Login in hopsworks
+    project = hopsworks.login(api_key_value = os.environ['HOPSWORKS_API_KEY'])
+    dataset_api = project.get_dataset_api()
+
+    # Get the model local path
+    file_path      = os.path.abspath(local_file_name)
+
+    # Upload the new model
+    dataset_api.upload(file_path, hopsworks_directory, overwrite=True)
+
+
 def replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory):
 
     import hopsworks
@@ -270,22 +289,31 @@ def replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_di
     # Get the model local path
     file_path      = os.path.abspath(local_file_name)
 
+    '''
     # Remove model from Hopsworks
     try:
-        dataset_api.remove(hopsworks_directory + hopsworks_file_name)
+        dataset_api.remove(hopsworks_directory + local_file_name)
     except RestAPIError:
         print('I was not able to remove the file')
-    #Create new directory for model
+    
+    # Remove model from Hopsworks
+    try:
+        dataset_api.remove(hopsworks_directory + local_file_name)
+    except RestAPIError:
+        print('I was not able to remove the directory')
+    '''
+    # Remove model from Hopsworks
     try:
         dataset_api.mkdir(hopsworks_directory)
     except RestAPIError:
-        print("The folder already exists")
+        print('I was not able to remove the file')
 
     # Upload the new model
-    dataset_api.upload(file_path,  hopsworks_directory, overwrite=True)
+    print('Now I try to upload the model!')
+    dataset_api.upload(file_path, hopsworks_directory, overwrite=True)
 
 
-def replace_file_on_hopsworks_Iter(local_file_name, hopsworks_file_name, hopsworks_directory):
+def replace_file_on_hopsworks_Iter(local_file_name, hopsworks_file_name, hopsworks_directory, model_bool):
 
     import hopsworks
     import pandas as pandas
@@ -296,7 +324,10 @@ def replace_file_on_hopsworks_Iter(local_file_name, hopsworks_file_name, hopswor
     OPERATION_DONE = False
     while(not OPERATION_DONE):
         try:
-            replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory)
+            if model_bool:
+                replace_model_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory)
+            else:
+                replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_directory)
             OPERATION_DONE = True
             print('\n**** File ' + local_file_name + ' replaced successfully! ****\n')
 
@@ -322,7 +353,7 @@ def training_pipeline_model_training_and_saving(df, save_also_schema):
     from hopsworks.client.exceptions import RestAPIError
 
     # Set the hopsworks file directory
-    hopsworks_directory = '/Projects/SMLFinalProject3/Models/flight_weather_delay_model/2/'
+    hopsworks_directory = '/Projects/SMLFinalProject3/Models/flight_weather_delay_model/10/'
 
 
     ##### MODEL TRAINING #####
@@ -344,7 +375,7 @@ def training_pipeline_model_training_and_saving(df, save_also_schema):
     joblib.dump(model, model_file_name)
 
     # Iteratively try to replace the model on Hopsworks with this new version
-    replace_file_on_hopsworks_Iter(model_file_name, model_file_name, hopsworks_directory)
+    replace_file_on_hopsworks_Iter(model_file_name, model_file_name, hopsworks_directory, False)
 
     if save_also_schema:
         # Specify the schema of the models' input/output using the features (Xtrain) and labels (ytrain)
@@ -358,7 +389,7 @@ def training_pipeline_model_training_and_saving(df, save_also_schema):
             json.dump(schema, file, default=lambda o: getattr(o, "__dict__", o), sort_keys=True, indent=2)
 
         # Iteratively try to replace the model schema on Hopsworks with this new version
-        replace_file_on_hopsworks_Iter(schema_file_name, schema_file_name, hopsworks_directory)
+        replace_file_on_hopsworks_Iter(schema_file_name, schema_file_name, hopsworks_directory, True)
         os.remove(schema_file_name)
 
     # Remove the model file from the memory

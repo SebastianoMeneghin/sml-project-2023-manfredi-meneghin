@@ -1324,12 +1324,13 @@ def get_timetable_predictions(project):
     today_flight_weather_df,    today_timetable_attr_df    = collect_today_flight_weather_info()
     tomorrow_flight_weather_df, tomorrow_timetable_attr_df = collect_tomorrow_flight_weather_info()
 
-    # Download the pre-trained model and load it
-    mr        = project.get_model_registry()
-    model     = mr.get_model("flight_weather_delay_model", version=2)
-    model_dir = model.download()
-    model     = joblib.load(model_dir + "/flight_weather_delay_model.pkl")
+    # Set the remote Hopsworks path
+    online_model_path = 'Models/flight_weather_delay_model/10/flight_weather_delay_model.pkl'
 
+    # Get the model from the online Hopsworks source
+    dataset_api       = project.get_dataset_api()
+    local_model_path  = os.path.abspath(dataset_api.download(online_model_path, overwrite = True))
+    model             = joblib.load(local_model_path)
 
     # Predict today and tomorrow delays
     X_today         = today_flight_weather_df.drop(columns={'dep_delay'})
@@ -1399,11 +1400,6 @@ def replace_file_on_hopsworks(local_file_name, hopsworks_file_name, hopsworks_di
         dataset_api.remove(hopsworks_directory + hopsworks_file_name)
     except RestAPIError:
         print('I was not able to remove the file')
-    #Create new directory for model
-    try:
-        dataset_api.mkdir(hopsworks_directory)
-    except RestAPIError:
-        print("The folder already exists")
 
     # Upload the new model
     dataset_api.upload(file_path,  hopsworks_directory, overwrite=True)

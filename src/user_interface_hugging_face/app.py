@@ -143,7 +143,7 @@ def get_name_of_cities():
 
     # Make the API request for Swedavia API
     response = requests.get(swedavia_url, headers = headers)
-    response1 = requests.get(swedavia_url, headers = headers)
+    response1 = requests.get(swedavia_url1, headers = headers)
     flights_swedavia = response.json()
     flights_swedavia1 = response1.json()
 
@@ -207,11 +207,11 @@ def get_metrics():
     dataframe = dataframe.sort_values(['Date'], ascending = False)
     return dataframe
 
-selected_columns = ['destination', 'airport code', 'flight number', 'ontime', 'delayed']
+selected_columns   = ['destination', 'airport code', 'flight number', 'ontime', 'delayed']
 ciccio, pasticcio  = pd.DataFrame(), pd.DataFrame()
 cities_datafram    = get_name_of_cities()
 ciccio             = get_today_dataframe()
-ciccio             = ciccio.rename(columns={'airport':'airport code' , 'ArrivalAirportEnglish':'destination', 'flight_number':'flight number'})
+ciccio             = ciccio.rename(columns={'airport':'airport code', 'ArrivalAirportEnglish':'destination', 'flight_number':'flight number'})
 today_dataframe    = ciccio[selected_columns]
 pasticcio          = get_tomorrow_dataframe()
 pasticcio          = pasticcio.rename(columns={'airport':'airport code','ArrivalAirportEnglish':'destination', 'flight_number':'flight number'})
@@ -228,10 +228,12 @@ def get_possible_destinations():
 
 def get_dataframe_of(day):
     global cities_datafram, today_dataframe, tomorrow_dataframe
+    today_df, tomorrow_df = pd.DataFrame(), pd.DataFrame()
+    today_df, tomorrow_df = today_dataframe, tomorrow_dataframe
     if   (day.lower() == 'today'):
-        return today_dataframe
+        return today_df
     elif (day.lower() == 'tomorrow'):
-        return tomorrow_dataframe
+        return tomorrow_df
 
 def get_specific_flights(day, max_delay, departure_hour, ampm, weather, destinations, yes):
     df = get_dataframe_of(day)
@@ -264,12 +266,19 @@ def get_specific_flights(day, max_delay, departure_hour, ampm, weather, destinat
 
 def full_day_departure(day):
     dataframe = get_dataframe_of(day)
-    dataframe.drop(columns=['airport code'], inplace=True)
-    return dataframe
+    copy_df   = dataframe.drop(columns=['airport code'])
+    return copy_df
 
 def get_performance():
     global performance_metric
     return performance_metric
+
+
+'''
+print(get_specific_flights('today', 100, 8, 'am', 'weather', ['Select all'], 'yes'))
+print(full_day_departure('tomorrow'))
+print(get_performance())
+'''
 
 specific_flights = gr.Interface(
     get_specific_flights,
