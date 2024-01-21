@@ -7,7 +7,7 @@ This repository is related to the **Final Project** of the course [ID2223 Scalab
 In **this repository** you can find:
 - [**Machine Learning Serverless Pipeline**](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src) comprehensive of running daily script for both [local](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src/local_daily_scripts) and remote environments.
 - [**Flight Info and Meteorological Analysis (MESAN) in Arlanda**](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/datasets/) of the full year 2023.
-- [**Graphical User Interface on Gradio**][https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src/hugging_face_user_interface](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src/user_interface_hugging_face)) running on [*HuggingFace*](https://huggingface.co/spaces/SebastianoMeneghin/flight_delay) 🤗, where you can play with the data (our own version of [**tl:dr**](https://huggingface.co/spaces/SebastianoMeneghin/flight_delay))
+- [**Graphical User Interface on Gradio**](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src/user_interface_hugging_face) running on [*HuggingFace*](https://huggingface.co/spaces/SebastianoMeneghin/flight_delay) 🤗, where you can play with the data (our own version of [**tl:dr**](https://huggingface.co/spaces/SebastianoMeneghin/flight_delay))
 
 The project has been developed in **Python** on our own machines, but we have used **Jupyter notebooks** for Exploratory Data Analysis for a more insightful data visualization.
 
