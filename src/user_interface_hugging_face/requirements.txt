@@ -1,4 +1,5 @@
-gradio
-hopsworks
-pandas
-numpy
+gradio==4.12.0
+hopsworks==3.4.2
+numpy<1.26.3
+hsfs==3.4.5
+pandas>=2.0.3,<2.2.0
