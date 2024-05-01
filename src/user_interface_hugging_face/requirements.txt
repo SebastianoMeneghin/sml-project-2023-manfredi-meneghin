@@ -1,4 +1,6 @@
-gradio
-hopsworks
-pandas
+pip==24.0
+gradio>=4.20.0,<4.26.0
+hopsworks>=3.7.0
 numpy
+hsfs~=3.7.0
+great-expectations>=0.15.0
