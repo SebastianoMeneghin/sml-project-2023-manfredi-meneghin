@@ -1,4 +1,4 @@
-# Scalable Machine Learning and Deep Learning, Final Project, 2023/2024
+# “DeLight” Delayed fLights: A Dynamic Serverless ML pipeline
 
 ## About
 This repository is related to the **Final Project** of the course [ID2223 Scalable Machine Learning and Deep Learning](https://www.kth.se/student/kurser/kurs/ID2223?l=en) at [KTH](https://www.kth.se). The **project proposal** can be found [here](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/blob/main/SML_FinalProject_ProjectProposal_ManfrediMeneghin.pdf).
