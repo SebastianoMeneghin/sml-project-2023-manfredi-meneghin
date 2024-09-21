@@ -1,11 +1,11 @@
 # “DeLight” Delayed fLights: A Dynamic Serverless Machine Learning pipeline
 
 ## About
-This repository is related to the **Final Project** of the course [ID2223 Scalable Machine Learning and Deep Learning](https://www.kth.se/student/kurser/kurs/ID2223?l=en) at [KTH](https://www.kth.se). The **project proposal** can be found [here](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/blob/main/SML_FinalProject_ProjectProposal_ManfrediMeneghin.pdf).
+This repository is related to the **Final Project** of the course [ID2223 Scalable Machine Learning and Deep Learning](https://www.kth.se/student/kurser/kurs/ID2223?l=en) at [KTH](https://www.kth.se). The **project proposal** can be found [here](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/blob/main/deliverables/SML_FinalProject_ProjectProposal_ManfrediMeneghin.pdf).
 
 *"DeLight" - Delayed fLights*, our final project, consist in a *Serverless Machine Learning pipeline* able to *predict the flight delay* of flight daily departing from [Stockholm Arlanda International Airport](https://www.swedavia.se/arlanda/), depending on the weather condition and historical flight delay information.
 In **this repository** you can find:
-- [**Machine Learning Serverless Pipeline**](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src) comprehensive of running daily script for both [local](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src/local_daily_scripts) and remote environments.
+- [**Machine Learning Serverless Pipeline**](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src) comprehensive of running daily script for both [local](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src/other/local_daily_scripts) and remote environments.
 - [**Flight Info and Meteorological Analysis (MESAN) in Arlanda**](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/datasets/) of the full year 2023.
 - [**Graphical User Interface on Gradio**](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main/src/user_interface_hugging_face) running on [*HuggingFace*](https://huggingface.co/spaces/SebastianoMeneghin/flight_delay) 🤗, where you can play with the data (our own version of [**tl:dr**](https://huggingface.co/spaces/SebastianoMeneghin/flight_delay))
 
