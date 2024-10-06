@@ -3,7 +3,7 @@ import modal
 
 name  = "flight_delays_backfill_feature_pipeline_daily"
 image = modal.Image.debian_slim().pip_install(["hopsworks>=3.7.*", "joblib", "seaborn","scikit-learn", "numpy",
-                                               "pandas", "pandasql", "xgboost", "pygrib"])
+                                               "pandas", "pandasql", "xgboost", "pygrib", "pyarrow"])
 app   = modal.App(name, image=image)
 
 @app.function(cpu=1.0, image=image, schedule=modal.Cron('0 22 * * *'), secrets=[modal.Secret.from_name("hopsworks_sml_project")])
@@ -469,11 +469,12 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
     import math
     import pandas as pd
     from datetime import datetime
+    from io import StringIO
 
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
 
     # Get the json file
-    df = pd.read_json(json_file)
+    df = pd.read_json(StringIO(json_file))
 
     # Drop all the flights having more than one flight_number (used by different companies to sell same tickets)
     df.drop_duplicates(subset = ['depScheduledTime', 'depApIataCode', 'arrApIataCode'], inplace= True)

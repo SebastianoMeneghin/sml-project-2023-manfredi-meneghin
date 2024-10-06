@@ -3,7 +3,7 @@ import modal
 
 name  = "flight_delays_batch_inference_pipeline_daily"
 image = modal.Image.debian_slim().pip_install(["hopsworks>=3.7.*", "joblib", "seaborn","scikit-learn", "numpy",
-                                               "pandas", "pandasql", "xgboost", "pygrib"])
+                                               "pandas", "pandasql", "xgboost", "pygrib", "pyarrow"])
 app   = modal.App(name, image=image)
 
 
@@ -517,11 +517,12 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
     import pandas as pd
     import numpy as np
     from datetime import datetime
+    from io import StringIO
 
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
 
     # Get the json file
-    df = pd.read_json(json_file)
+    df = pd.read_json(StringIO(json_file))
 
     # Drop all the flights having more than one flight_number (used by different companies to sell same tickets)
     df.drop_duplicates(subset = ['depScheduledTime', 'depApIataCode', 'arrApIataCode'], inplace= True)

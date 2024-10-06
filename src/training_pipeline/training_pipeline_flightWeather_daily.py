@@ -4,7 +4,7 @@ import modal
 
 name  = "flight_delays_training_pipeline_daily"
 image = modal.Image.debian_slim().pip_install(["hopsworks>=3.7.*", "joblib", "seaborn","scikit-learn", "numpy",
-                                               "pandas", "pandasql", "xgboost", "pygrib"])
+                                               "pandas", "pandasql", "xgboost", "pygrib", "pyarrow"])
 app   = modal.App(name, image=image)
 
 @app.function(cpu=1.0, image=image, schedule=modal.Cron('1 0 * * *'), secrets=[modal.Secret.from_name("hopsworks_sml_project")])

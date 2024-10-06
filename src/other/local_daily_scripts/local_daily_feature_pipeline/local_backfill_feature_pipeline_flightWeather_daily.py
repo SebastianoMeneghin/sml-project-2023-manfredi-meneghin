@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import pandasql as sqldf
 from datetime import datetime
+from io import StringIO
 
 
 def one_day_backward(year, month, day):
@@ -425,7 +426,7 @@ def swedaviaAPI_flight_processor(json_file, json_date, mode):
     datetime_format = "%Y-%m-%dT%H:%M:%SZ"
 
     # Get the json file
-    df = pd.read_json(json_file)
+    df = pd.read_json(StringIO(json_file))
 
     # Drop all the flights having more than one flight_number (used by different companies to sell same tickets)
     df.drop_duplicates(subset = ['depScheduledTime', 'depApIataCode', 'arrApIataCode'], inplace= True)
