@@ -7,16 +7,14 @@ dependencies:
 - numpy
 - pandas
 - joblib
-- scikit-learn==1.1.1
+- scikit-learn
 - seaborn
 - dataframe_image
 - gradio
 - pip
 - twofish
 - pygrib
-- eccodes
 - pandasql
 - xgboost
-# You also need to install "hopsworks" through "pip install hopsworks"
+# You also need to install "hopsworks>3.7.*" through "pip install hopsworks"
 # You also need to install "modal" through "pip install modal"
-# You also need to install "cfgrib" through "pip install cfgrib"

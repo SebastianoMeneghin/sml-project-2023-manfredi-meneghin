@@ -1,11 +1,13 @@
 import os
 import modal
 
-stub = modal.Stub("flight_delays_batch_inference_pipeline_daily")
-image = modal.Image.debian_slim().pip_install(["hopsworks", "joblib", "seaborn","scikit-learn==1.1.1", "numpy",
-                                               "pandas", "pandasql", "xgboost", "cfgrib", "eccodes", "pygrib"])
+name  = "flight_delays_batch_inference_pipeline_daily"
+image = modal.Image.debian_slim().pip_install(["hopsworks>=3.7.*", "joblib", "seaborn","scikit-learn", "numpy",
+                                               "pandas", "pandasql", "xgboost", "pygrib"])
+app   = modal.App(name, image=image)
 
-@stub.function(cpu=1.0, image=image, schedule=modal.Cron('15 0 * * *'), secret=modal.Secret.from_name("hopsworks_sml_project"))
+
+@app.function(cpu=1.0, image=image, schedule=modal.Cron('15 0 * * *'), secrets=[modal.Secret.from_name("hopsworks_sml_project")])
 def f():
     g()
 
