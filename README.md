@@ -101,9 +101,9 @@ Another significant factor is the **arguably low number** of features collected,
 
 
 ## How to run
-The  whole project has been developed with **high-attention for replicability** and future-proofing. Indeed, **it is possible to replicate this whole project** by only running scripts **locally on your own laptop** with Python installed on, without the use of any other platform, as [Modal](https://modal.com/) or [Hopsworks](https://www.hopsworks.ai/).
+The  whole project has been developed with **high-attention for replicability** and future-proofing. Indeed, **it is possible to replicate this whole project** by only running scripts **locally on your own laptop**, just with a below defined Python environment, without the use of any other platform, as [Modal](https://modal.com/) or [Hopsworks](https://www.hopsworks.ai/).
 
-In order to be ready, you first need to *set up your own* **environment**, according to the file ```environment.yml```. This can be done easy via ```conda```, through the command ```conda env create --file environment.yml``` 
+In order to be ready, you first need to *set up your own* **environment**, according to the file [```environment.yaml```](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/blob/5856099201155ab5db2ec0f9ea67c498c2f73e05/src/environment.yaml). This can be done easy via ```conda```, through the command ```conda env create --file environment.yaml```, if you have any distribution of Conda, Anaconda, Miniconda, etc., installed on your machine. This will set up for you the right version of Python, with all the dependencies needed for this project, including ```pip``` dependencies.
 
 Then, you will need to **grant access to a flight information and a weather forecast/analysis provider**, so you will need to get the API Key from that service. [Swedavia APIs](https://apideveloper.swedavia.se/) and [SMHI OpenData APIs](https://opendata.smhi.se/apidocs/) are our **suggested free option**, for flights from and to Sweden and weather information in a broader area above the Scandinavian countries. About the **historical data**, you can access easily to all the stages of the data cleaning and processing in [Datasets](https://github.com/SebastianoMeneghin/sml-project-2023-manfredi-meneghin/tree/main).
 
