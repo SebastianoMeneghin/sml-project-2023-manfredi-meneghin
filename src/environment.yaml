@@ -16,5 +16,7 @@ dependencies:
 - pygrib
 - pandasql
 - xgboost
-# You also need to install "hopsworks>3.7.*" through "pip install hopsworks"
-# You also need to install "modal" through "pip install modal"
+- pip
+- pip:
+  - hopsworks hopsworks>3.7.*
+  - modal
